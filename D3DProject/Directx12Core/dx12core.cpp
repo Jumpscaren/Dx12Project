@@ -95,45 +95,52 @@ void dx12core::CreateDevice()
 	assert(SUCCEEDED(hr));
 }
 
-//For next time
-//Create swapchain and render target views
-
-void dx12core::CreateRenderTargetViews()
+void dx12core::CreateSwapchain(HWND window_handle)
 {
-	//UINT descriptor_size_RTV = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	DXGI_SWAP_CHAIN_DESC1 desc;
+	desc.Width = 0;
+	desc.Height = 0;
+	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	desc.Stereo = false;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	desc.BufferCount = m_backbuffer_count;
+	desc.Scaling = DXGI_SCALING_STRETCH;
+	desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	desc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+	desc.Flags = 0;
 
-	//D3D12_DESCRIPTOR_HEAP_DESC desc;
-	//desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	//desc.NumDescriptors = m_number_of_back_buffers;
-	//desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	//desc.NodeMask = 0;
+	IDXGISwapChain1* swap_chain;
+	HRESULT hr = m_factory->CreateSwapChainForHwnd(m_direct_command_queue.Get(), window_handle, &desc, nullptr, nullptr, &swap_chain);
+	assert(SUCCEEDED(hr));
 
-	//HRESULT hr = m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(m_dh_RTV.GetAddressOf()));
-	//assert(SUCCEEDED(hr));
+	//Change the Swapchain from IDXGISwapChain1 to IDXGISwapChain3
+	hr = swap_chain->QueryInterface(__uuidof(IDXGISwapChain3), (void**)m_swapchain.GetAddressOf());
+	assert(SUCCEEDED(hr));
+	swap_chain->Release();
 
-	//UINT descriptor_start_offset = 0;
+	m_swapchain->GetDesc1(&desc);
 
-	//D3D12_CPU_DESCRIPTOR_HANDLE heap_handle =
-	//	m_dh_RTV->GetCPUDescriptorHandleForHeapStart();
-	//heap_handle.ptr += descriptor_size_RTV * descriptor_start_offset;
+	//Getting the size of the window
+	m_backbuffer_width = desc.Width;
+	m_backbuffer_height = desc.Height;
+}
 
-	//for (int i = 0; i < m_number_of_back_buffers; ++i)
-	//{
-	//	ID3D12Resource* back_buffer = nullptr;
-	//	HRESULT hr = m_swapchain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
-	//	assert(SUCCEEDED(hr));
-	//	m_device->CreateRenderTargetView(back_buffer, nullptr, heap_handle);
-	//	heap_handle.ptr += descriptor_size_RTV;
-	//	m_back_buffers.push_back(back_buffer);
-	//}
+void dx12core::CreateCommandQueue(ID3D12CommandQueue** command_queue, const D3D12_COMMAND_LIST_TYPE& command_type)
+{
+	D3D12_COMMAND_QUEUE_DESC desc;
+	desc.Type = command_type;
+	desc.Priority = 0;
+	desc.NodeMask = 0;
+	desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	HRESULT hr = m_device->CreateCommandQueue(&desc, IID_PPV_ARGS(command_queue));
+	assert(SUCCEEDED(hr));
 }
 
 dx12core::dx12core()
 {
-	EnableDebugLayer();
-	EnableGPUBasedValidation();
 
-	CreateDevice();
 }
 
 dx12core::~dx12core()
@@ -141,9 +148,51 @@ dx12core::~dx12core()
 	//m_adapter->Release();
 	//m_device->Release();
 	//m_factory->Release();
+
+	delete m_direct_command;
+	delete m_texture_manager;
 }
 
 dx12core& dx12core::GetDx12Core()
 {
 	return s_instance;
+}
+
+void dx12core::Init(HWND hwnd, UINT backbuffer_count)
+{
+	m_backbuffer_count = backbuffer_count;
+
+	if (m_backbuffer_count < 2)
+		assert(false);
+
+	EnableDebugLayer();
+	EnableGPUBasedValidation();
+
+	CreateDevice();
+	CreateCommandQueue(m_direct_command_queue.GetAddressOf(), D3D12_COMMAND_LIST_TYPE_DIRECT);
+	CreateSwapchain(hwnd);
+
+	m_direct_command = new dx12command(D3D12_COMMAND_LIST_TYPE_DIRECT);
+	m_texture_manager = new dx12texturemanager(2, 1, 50);
+
+	for (int i = 0; i < m_backbuffer_count; ++i)
+		m_backbuffers.push_back(m_texture_manager->CreateRenderTargetView(i));
+
+	m_depth_stencil = m_texture_manager->CreateDepthStencilView(m_backbuffer_width, m_backbuffer_height, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
+
+}
+
+ID3D12Device* dx12core::GetDevice()
+{
+	return m_device.Get();
+}
+
+IDXGISwapChain3* dx12core::GetSwapChain()
+{
+	return m_swapchain.Get();
+}
+
+dx12command* dx12core::GetDirectCommand()
+{
+	return m_direct_command;
 }

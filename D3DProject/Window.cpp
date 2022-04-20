@@ -67,3 +67,8 @@ bool Window::WinMsg()
     }
     return true;
 }
+
+HWND Window::GetWindowHandle() const
+{
+    return m_window_handle;
+}

@@ -16,5 +16,6 @@ public:
 	Window() = delete;
 	Window(UINT width, UINT height, std::wstring window_name, std::wstring window_text);
 	bool WinMsg();
+	HWND GetWindowHandle() const;
 };
 
