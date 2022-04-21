@@ -4,14 +4,19 @@
 #include <assert.h>
 #include <wrl/client.h>
 #include <vector>
+#include <string>
 
-enum class TextureType
+enum class TextureType : UINT16
 {
-	TEXTURE_RTV = 0,
-	TEXTURE_DSV = 1,
-	TEXTURE_SRV = 2,
-	TEXTURE_UAV = 3,
+	TEXTURE_RTV = 1,
+	TEXTURE_DSV = 2,
+	TEXTURE_SRV = 4,
+	TEXTURE_UAV = 8,
+	TEXTURE_CBV = 16,
 };
+
+TextureType operator|(TextureType lhs, TextureType rhs);
+UINT16 operator&(const TextureType& lhs, const TextureType& rhs);
 
 struct dx12texture
 {
@@ -20,6 +25,21 @@ struct dx12texture
 	TextureType texture_type;
 };
 
+struct TextureResource
+{
+	dx12texture shader_resource_view;
+	dx12texture render_target_view;
+	dx12texture depth_stencil_view;
+	dx12texture unordered_access_view;
+
+	TextureResource();
+};
+
+struct TextureInfo
+{
+	unsigned char* texture_data;
+	UINT width, height, comp, channels;
+};
 class dx12texturemanager
 {
 private:
@@ -33,15 +53,32 @@ private:
 	UINT m_dh_shader_bindable_current_offset = 0;
 	UINT m_max_dh_shader_bindable_offset;
 
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_render_target_view_resources;
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_depth_stencil_view_resources;
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_shader_bindable_resources;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_view_resources;
+
+	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_render_target_view_resources;
+	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_depth_stencil_view_resources;
+	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_shader_bindable_resources;
+
+	Microsoft::WRL::ComPtr<ID3D12Heap> m_upload_heap;
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_upload_buffer;
+	UINT64 m_upload_current_offset;
+
+private:
+
+	TextureInfo LoadTextureFromFile(const std::string& texture_file_name, UINT channels = 4) const;
+
+	void UploadTextureData(ID3D12Resource* target_resource, unsigned char* data, UINT alignment);
+
 public:
 	dx12texturemanager(UINT max_render_target_views, UINT max_depth_stencil_views, UINT max_shader_bindables);
 	~dx12texturemanager();
 
-	dx12texture CreateRenderTargetView(UINT back_buffer_index);
+	TextureResource CreateRenderTargetView(UINT back_buffer_index);
 
-	dx12texture CreateDepthStencilView(UINT texture_width, UINT texture_height, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+	TextureResource CreateDepthStencilView(UINT texture_width, UINT texture_height, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
+
+	TextureResource CreateTexture2D(const std::string& texture_file_name, const TextureType& texture_type);
+
+	dx12texture CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements);
 };
 

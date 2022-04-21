@@ -12,7 +12,7 @@ class dx12core
 private:
 	Microsoft::WRL::ComPtr<IDXGIFactory5> m_factory;
 	Microsoft::WRL::ComPtr<IDXGIAdapter1> m_adapter;
-	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
+	Microsoft::WRL::ComPtr<ID3D12Device5> m_device;
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> m_swapchain;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dh_RTV;
@@ -25,11 +25,11 @@ private:
 	
 	UINT m_backbuffer_count;
 	UINT m_backbuffer_width, m_backbuffer_height;
-	std::vector<dx12texture> m_backbuffers;
+	std::vector<TextureResource> m_backbuffers;
 
 	dx12texturemanager* m_texture_manager;
 
-	dx12texture m_depth_stencil;
+	TextureResource m_depth_stencil;
 
 private:
 	static dx12core s_instance;
@@ -47,7 +47,7 @@ public:
 	dx12core& operator=(const dx12core& other) = delete;
 	static dx12core& GetDx12Core();
 	void Init(HWND hwnd, UINT backbuffer_count = 2);
-	ID3D12Device* GetDevice();
+	ID3D12Device5* GetDevice();
 	IDXGISwapChain3* GetSwapChain();
 	dx12command* GetDirectCommand();
 };

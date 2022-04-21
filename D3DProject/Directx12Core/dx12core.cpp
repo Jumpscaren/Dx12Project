@@ -91,7 +91,12 @@ void dx12core::CreateDevice()
 		++adapter_index;
 	}
 
-	hr = D3D12CreateDevice(m_adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(m_device.GetAddressOf()));
+	ID3D12Device* temp_device = nullptr;
+	hr = D3D12CreateDevice(m_adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&temp_device));
+	assert(SUCCEEDED(hr));
+	hr = temp_device->QueryInterface(__uuidof(ID3D12Device5),
+		reinterpret_cast<void**>(m_device.GetAddressOf()));
+	temp_device->Release();
 	assert(SUCCEEDED(hr));
 }
 
@@ -180,9 +185,12 @@ void dx12core::Init(HWND hwnd, UINT backbuffer_count)
 
 	m_depth_stencil = m_texture_manager->CreateDepthStencilView(m_backbuffer_width, m_backbuffer_height, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
+	m_texture_manager->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
+
+
 }
 
-ID3D12Device* dx12core::GetDevice()
+ID3D12Device5* dx12core::GetDevice()
 {
 	return m_device.Get();
 }
