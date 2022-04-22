@@ -124,7 +124,7 @@ BufferResource dx12buffermanager::CreateStructuredBuffer(void* data, unsigned in
 {
 	BufferResource buffer_resource = CreateBuffer(data, elementSize, nrOfElements);
 	buffer_resource.structured_buffer = m_texture_manager->CreateStructuredBuffer(buffer_resource.buffer.Get(), elementSize, nrOfElements);
-	return BufferResource();
+	return buffer_resource;
 }
 
 BufferResource::BufferResource()

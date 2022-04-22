@@ -339,6 +339,26 @@ dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource,
 	return structured_buffer;
 }
 
+ID3D12Resource* dx12texturemanager::GetTextureResource(UINT resource_index)
+{
+	return m_view_resources[resource_index].Get();
+}
+
+ID3D12DescriptorHeap* dx12texturemanager::GetShaderBindableDescriptorHeap()
+{
+	return m_dh_shader_bindable.Get();
+}
+
+ID3D12DescriptorHeap* dx12texturemanager::GetRenderTargetViewDescriptorHeap()
+{
+	return m_dh_RTV.Get();
+}
+
+ID3D12DescriptorHeap* dx12texturemanager::GetDepthStencilViewDescriptorHeap()
+{
+	return m_dh_DSV.Get();
+}
+
 //Imorgon
 //Add upload buffer for data and make it so we do not use 1.4 gb just for some textures
 //Root parameters

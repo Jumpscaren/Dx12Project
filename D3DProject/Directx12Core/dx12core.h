@@ -6,6 +6,8 @@
 #include <vector>
 #include "dx12command.h"
 #include "dx12texturemanager.h"
+#include "dx12renderpipeline.h"
+#include "dx12buffermanager.h"
 
 class dx12core
 {
@@ -31,6 +33,10 @@ private:
 
 	TextureResource m_depth_stencil;
 
+	dx12renderpipeline* m_render_pipeline;
+
+	dx12buffermanager* m_buffer_manager;
+
 private:
 	static dx12core s_instance;
 private:
@@ -50,4 +56,12 @@ public:
 	ID3D12Device5* GetDevice();
 	IDXGISwapChain3* GetSwapChain();
 	dx12command* GetDirectCommand();
+	dx12texturemanager* GetTextureManager();
+	dx12buffermanager* GetBufferManager();
+	ID3D12CommandQueue* GetCommandQueue();
+	void SetRenderPipeline(dx12renderpipeline* render_pipeline);
+	void Show();
+	void PreDraw();
+	void Draw();
+	void FinishDraw();
 };

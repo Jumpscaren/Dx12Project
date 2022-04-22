@@ -148,6 +148,77 @@ dx12core::dx12core()
 
 }
 
+void dx12core::PreDraw()
+{
+	m_direct_command->Reset();
+
+	UINT current_backbuffer_index = m_swapchain->GetCurrentBackBufferIndex();
+
+	// Set descriptor heaps before setting root signature if direct heap access is needed
+	m_direct_command->SetDescriptorHeap(m_texture_manager->GetShaderBindableDescriptorHeap());
+	m_direct_command->SetRootSignature(m_render_pipeline->GetRootSignature());
+	m_direct_command->SetPipelineState(m_render_pipeline->GetPipelineState());
+
+	ID3D12Resource* back_buffer = m_texture_manager->GetTextureResource(m_backbuffers[current_backbuffer_index].render_target_view.resource_index);
+	m_direct_command->TransistionBuffer(back_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	m_direct_command->ClearRenderTargetView(m_texture_manager->GetRenderTargetViewDescriptorHeap(), current_backbuffer_index);
+	m_direct_command->ClearDepthStencilView(m_texture_manager->GetDepthStencilViewDescriptorHeap(), 0);
+
+	m_direct_command->SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	m_direct_command->SetOMRenderTargets(m_texture_manager->GetRenderTargetViewDescriptorHeap(), current_backbuffer_index, m_texture_manager->GetDepthStencilViewDescriptorHeap(), 0);
+	m_direct_command->SetViewport(m_backbuffer_width, m_backbuffer_height);
+	m_direct_command->SetScissorRect(m_backbuffer_width, m_backbuffer_height);
+}
+
+void dx12core::Draw()
+{
+	auto object_binds = m_render_pipeline->GetObjects();
+	for (auto& object : object_binds)
+	{
+		auto object_buffers = object->GetBuffers();
+		for (auto& buffer : object_buffers)
+		{
+			switch (buffer.second->binding_type)
+			{
+				case BindingType::STRUCTURED_BUFFER:
+					m_direct_command->SetDescriptorTable(buffer.second, m_texture_manager->GetShaderBindableDescriptorHeap(), buffer.first.structured_buffer);
+					break;
+			}
+		}
+
+		auto object_textures = object->GetTextures();
+		for (auto& texture : object_textures)
+		{
+			switch (texture.second->binding_type)
+			{
+			case BindingType::SHADER_RESOURCE:
+				m_direct_command->SetDescriptorTable(texture.second, m_texture_manager->GetShaderBindableDescriptorHeap(), texture.first.shader_resource_view);
+				break;
+			}
+		}
+
+		m_direct_command->Draw(3, 1, 0, 0);
+	}
+	//m_direct_command->SetDescriptorTable(m_render_pipeline->GetObjectRootBinds()[0], m_texture_manager->GetShaderBindableDescriptorHeap(), vertex.structured_buffer);
+	//m_direct_command->SetDescriptorTable(m_render_pipeline->GetObjectRootBinds()[1], m_texture_manager->GetShaderBindableDescriptorHeap(), texture.shader_resource_view);
+	//commandList->SetGraphicsRootShaderResourceView(0, vertexBuffer->GetGPUVirtualAddress());
+	//commandList->SetGraphicsRootDescriptorTable(1, shaderBindableHeap->GetGPUDescriptorHandleForHeapStart());
+	//commandList->DrawInstanced(3, 1, 0, 0);
+}
+
+void dx12core::FinishDraw()
+{
+	UINT current_backbuffer_index = m_swapchain->GetCurrentBackBufferIndex();
+	ID3D12Resource* back_buffer = m_texture_manager->GetTextureResource(m_backbuffers[current_backbuffer_index].render_target_view.resource_index);
+	m_direct_command->TransistionBuffer(back_buffer, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+	m_direct_command->Execute();
+	m_swapchain->Present(0,0);
+	m_direct_command->SignalAndWait();
+}
+
 dx12core::~dx12core()
 {
 	//m_adapter->Release();
@@ -179,13 +250,14 @@ void dx12core::Init(HWND hwnd, UINT backbuffer_count)
 
 	m_direct_command = new dx12command(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_texture_manager = new dx12texturemanager(2, 1, 50);
+	m_buffer_manager = new dx12buffermanager(m_texture_manager);
 
 	for (int i = 0; i < m_backbuffer_count; ++i)
 		m_backbuffers.push_back(m_texture_manager->CreateRenderTargetView(i));
 
 	m_depth_stencil = m_texture_manager->CreateDepthStencilView(m_backbuffer_width, m_backbuffer_height, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
 
-	m_texture_manager->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
+	//m_texture_manager->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
 
 
 }
@@ -203,4 +275,31 @@ IDXGISwapChain3* dx12core::GetSwapChain()
 dx12command* dx12core::GetDirectCommand()
 {
 	return m_direct_command;
+}
+
+dx12texturemanager* dx12core::GetTextureManager()
+{
+	return m_texture_manager;
+}
+
+dx12buffermanager* dx12core::GetBufferManager()
+{
+	return m_buffer_manager;
+}
+
+ID3D12CommandQueue* dx12core::GetCommandQueue()
+{
+	return m_direct_command_queue.Get();
+}
+
+void dx12core::SetRenderPipeline(dx12renderpipeline* render_pipeline)
+{
+	m_render_pipeline = render_pipeline;
+}
+
+void dx12core::Show()
+{
+	//PreDraw();
+	//Draw();
+	//FinishDraw();
 }

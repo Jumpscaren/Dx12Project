@@ -49,3 +49,128 @@ void dx12command::CopyBufferRegion(ID3D12Resource* destination_buffer, ID3D12Res
 {
 	m_command_list->CopyBufferRegion(destination_buffer, destination_offset, source_buffer, source_offset, size);
 }
+
+void dx12command::Execute()
+{
+	HRESULT hr = m_command_list->Close();
+	assert(SUCCEEDED(hr));
+	ID3D12CommandList* temp = m_command_list.Get();
+	dx12core::GetDx12Core().GetCommandQueue()->ExecuteCommandLists(1, &temp);
+}
+
+void dx12command::Signal()
+{
+	++m_fence_value;
+	HRESULT hr = dx12core::GetDx12Core().GetCommandQueue()->Signal(m_fence.Get(), m_fence_value);
+	assert(SUCCEEDED(hr));
+}
+
+void dx12command::Wait()
+{
+	if (m_fence->GetCompletedValue() < m_fence_value)
+	{
+		HANDLE eventHandle = CreateEventEx(nullptr, 0, 0, EVENT_ALL_ACCESS);
+		HRESULT hr = m_fence->SetEventOnCompletion(m_fence_value, eventHandle);
+		WaitForSingleObject(eventHandle, INFINITE);
+		CloseHandle(eventHandle);
+	}
+}
+
+void dx12command::SignalAndWait()
+{
+	Signal();
+	Wait();
+}
+
+void dx12command::SetDescriptorHeap(ID3D12DescriptorHeap* descriptor_heap)
+{
+	m_command_list->SetDescriptorHeaps(1, &descriptor_heap);
+}
+
+void dx12command::SetRootSignature(ID3D12RootSignature* root_signature)
+{
+	m_command_list->SetGraphicsRootSignature(root_signature);
+}
+
+void dx12command::SetPipelineState(ID3D12PipelineState* pipeline_state)
+{
+	m_command_list->SetPipelineState(pipeline_state);
+}
+
+void dx12command::ClearRenderTargetView(ID3D12DescriptorHeap* descriptor_heap, UINT offset)
+{
+	float clearColour[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	UINT size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = descriptor_heap->GetCPUDescriptorHandleForHeapStart();
+	rtv_handle.ptr += size * offset;
+	m_command_list->ClearRenderTargetView(rtv_handle, clearColour, 0, nullptr);
+}
+
+void dx12command::ClearDepthStencilView(ID3D12DescriptorHeap* descriptor_heap, UINT offset)
+{
+	UINT size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = descriptor_heap->GetCPUDescriptorHandleForHeapStart();
+	dsv_handle.ptr += size * offset;
+	m_command_list->ClearDepthStencilView(dsv_handle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+}
+
+void dx12command::SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY topology)
+{
+	m_command_list->IASetPrimitiveTopology(topology);
+}
+
+void dx12command::SetOMRenderTargets(ID3D12DescriptorHeap* render_target_heap, UINT rtv_offset, ID3D12DescriptorHeap* depth_stencil_heap, UINT dsv_offset)
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = render_target_heap->GetCPUDescriptorHandleForHeapStart();
+	rtv_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV) * rtv_offset;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = depth_stencil_heap->GetCPUDescriptorHandleForHeapStart();
+	dsv_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV) * dsv_offset;
+
+	m_command_list->OMSetRenderTargets(1, &rtv_handle, true, &dsv_handle);
+}
+
+void dx12command::SetViewport(float width, float height)
+{
+	D3D12_VIEWPORT viewport = { 0, 0, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f };
+	m_command_list->RSSetViewports(1, &viewport);
+}
+
+void dx12command::SetScissorRect(float width, float height)
+{
+	D3D12_RECT scissorRect = { 0, 0, static_cast<long>(width), static_cast<long>(height) };
+	m_command_list->RSSetScissorRects(1, &scissorRect);
+}
+
+void dx12command::Reset()
+{
+	HRESULT hr = m_command_allocator->Reset();
+	assert(SUCCEEDED(hr));
+	hr = m_command_list->Reset(m_command_allocator.Get(), nullptr); // nullptr is initial state, no initial state
+	assert(SUCCEEDED(hr));
+}
+
+void dx12command::SetShaderResourceView(RootRenderBinding* binding, ID3D12Resource* resource)
+{
+	m_command_list->SetGraphicsRootShaderResourceView(binding->root_parameter_index, resource->GetGPUVirtualAddress());
+}
+
+void dx12command::SetDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource)
+{
+	//resource.;
+	UINT size = 0;
+
+	if (binding->binding_type == BindingType::SHADER_RESOURCE || binding->binding_type == BindingType::STRUCTURED_BUFFER)
+		size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	//Get the descriptor handle and the offset to move the pointer to the correct resource
+	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptor_heap->GetGPUDescriptorHandleForHeapStart();
+	gpu_handle.ptr += size * resource.descriptor_heap_offset; 
+
+	m_command_list->SetGraphicsRootDescriptorTable(binding->root_parameter_index, gpu_handle);
+}
+
+void dx12command::Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object)
+{
+	m_command_list->DrawInstanced(vertices, nr_of_objects, start_vertex, start_object);
+}

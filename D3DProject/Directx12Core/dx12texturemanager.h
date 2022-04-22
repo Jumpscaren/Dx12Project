@@ -80,5 +80,11 @@ public:
 	TextureResource CreateTexture2D(const std::string& texture_file_name, const TextureType& texture_type);
 
 	dx12texture CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements);
+
+	ID3D12Resource* GetTextureResource(UINT resource_index);
+
+	ID3D12DescriptorHeap* GetShaderBindableDescriptorHeap();
+	ID3D12DescriptorHeap* GetRenderTargetViewDescriptorHeap();
+	ID3D12DescriptorHeap* GetDepthStencilViewDescriptorHeap();
 };
 
