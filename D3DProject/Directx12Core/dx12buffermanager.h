@@ -7,6 +7,9 @@ struct BufferResource
 	dx12texture structured_buffer;
 
 	BufferResource();
+
+	UINT element_size;
+	UINT nr_of_elements;
 };
 
 class dx12buffermanager
@@ -22,8 +25,10 @@ private:
 
 public:
 	dx12buffermanager(dx12texturemanager* texture_manager);
+	~dx12buffermanager();
 
-	BufferResource CreateBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements);
+	BufferResource CreateBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, const D3D12_RESOURCE_FLAGS& flags = D3D12_RESOURCE_FLAG_NONE, const D3D12_RESOURCE_STATES& initial_state = D3D12_RESOURCE_STATE_COMMON);
+	BufferResource CreateBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, const D3D12_HEAP_TYPE& heap_type = D3D12_HEAP_TYPE_DEFAULT);
 	BufferResource CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements);
 };
 

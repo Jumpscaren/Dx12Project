@@ -19,6 +19,7 @@ public:
 	dx12command(const D3D12_COMMAND_LIST_TYPE& command_type);
 	~dx12command();
 	void TransistionBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STATES before_state, D3D12_RESOURCE_STATES after_state);
+	void ResourceBarrier(const D3D12_RESOURCE_BARRIER_TYPE& barrier_type, ID3D12Resource* resource);
 	void CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION* destination, D3D12_TEXTURE_COPY_LOCATION* source);
 	void CopyBufferRegion(ID3D12Resource* destination_buffer, ID3D12Resource* source_buffer, UINT destination_offset, UINT source_offset, UINT size);
 	void Execute();
@@ -38,5 +39,6 @@ public:
 	void SetShaderResourceView(RootRenderBinding* binding, ID3D12Resource* resource);
 	void SetDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource);
 	void Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object);
+	void BuildRaytracingAccelerationStructure(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
 };
 

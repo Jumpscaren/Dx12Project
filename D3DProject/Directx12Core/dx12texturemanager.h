@@ -69,6 +69,9 @@ private:
 
 	void UploadTextureData(ID3D12Resource* target_resource, unsigned char* data, UINT alignment);
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateCommitedTexture(const TextureType& texture_type, const TextureInfo& texture_info, D3D12_CLEAR_VALUE* clear_value = nullptr);
+	TextureResource CreateTextureViews(Microsoft::WRL::ComPtr<ID3D12Resource> texture, const TextureType& texture_type);
+
 public:
 	dx12texturemanager(UINT max_render_target_views, UINT max_depth_stencil_views, UINT max_shader_bindables);
 	~dx12texturemanager();
@@ -78,6 +81,7 @@ public:
 	TextureResource CreateDepthStencilView(UINT texture_width, UINT texture_height, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAG_NONE);
 
 	TextureResource CreateTexture2D(const std::string& texture_file_name, const TextureType& texture_type);
+	TextureResource CreateTexture2D(UINT texture_width, UINT texture_height, const TextureType& texture_type, D3D12_CLEAR_VALUE* clear_value = nullptr);
 
 	dx12texture CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements);
 

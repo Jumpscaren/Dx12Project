@@ -36,9 +36,56 @@ public:
 	void AddStructuredBuffer(const BufferResource& buffer_resource, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void AddShaderResourceView(const TextureResource& texture_resource, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void SetRenderPipeline(void* render_pipeline_in);
+	void SetMeshData(UINT element_size, UINT nr_of_elements);
 
 	std::vector<std::pair<BufferResource, RootRenderBinding*>>& GetBuffers();
 	std::vector<std::pair<TextureResource, RootRenderBinding*>>& GetTextures();;
+
+	UINT mesh_nr_of_elements;
+	UINT mesh_element_size;
+
+	~RenderObject();
+};
+
+template<size_t root_arguments_byte_size>
+struct ShaderRecord
+{
+	unsigned char shader_identifier[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES]; //Not a string, but data for a 'pointer' to the shader
+	unsigned char root_arguments[root_arguments_byte_size];
+};
+
+template<size_t root_arguments_byte_size>
+struct RayGenerationShaderRecord
+{
+	BufferResource buffer = {};
+
+	D3D12_GPU_VIRTUAL_ADDRESS_RANGE GetGpuAdressRange() const
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS_RANGE return_address;
+		return_address.StartAddress = buffer->GetGPUVirtualAddress();
+		return_address.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+			+ root_arguments_byte_size;
+
+		return return_address;
+	}
+};
+
+template<size_t root_arguments_byte_size, short nr_of_records>
+struct ShaderTable
+{
+	BufferResource buffer = {};
+
+	D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE GetGpuAdressRangeAndStride() const
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE return_address;
+		return_address.StartAddress = buffer->GetGPUVirtualAddress();
+		return_address.SizeInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+			+ root_arguments_byte_size * nr_of_records;
+		return_address.StrideInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+			+ root_arguments_byte_size;
+
+		return return_address;
+	}
 };
 
 class dx12renderpipeline
@@ -57,14 +104,23 @@ private:
 
 	std::vector<RenderObject*> m_render_objects;
 
+//Raytracing
+private:
+	Microsoft::WRL::ComPtr<ID3D12StateObject> m_raytracing_state_object;
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_raytracing_root_signature;
+	RayGenerationShaderRecord<32> ray_gen_record;
+	ShaderTable<32, 1> miss_record;
+	ShaderTable<32, 1> hit_record;
+
 private:
 	ID3DBlob* LoadCSO(const std::string& filepath);
 	void AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE range_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
+	void CreateRootSignature(ID3D12RootSignature** root_signature, const D3D12_ROOT_SIGNATURE_FLAGS& flags = D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 public:
 	dx12renderpipeline();
 	~dx12renderpipeline();
-	void AddConstantBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
+	void AddConstantBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, D3D12_ROOT_PARAMETER_TYPE parameter_type = D3D12_ROOT_PARAMETER_TYPE_CBV, UINT register_space = 0);
 	void AddStructuredBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void AddUnorderedAccess(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
@@ -77,5 +133,24 @@ public:
 	std::vector<RenderObject*>& GetObjects();
 
 	RenderObject* CreateRenderObject();
+
+//Raytracing
+private:
+	template<size_t root_arguments_byte_size>
+	void CreateShaderRecord(ShaderRecord<root_arguments_byte_size>& shader_record, const wchar_t* shader_name, void* root_argument_data)
+	{
+		ID3D12StateObjectProperties* stateObjectProperties = nullptr;
+		HRESULT hr = m_raytracing_state_object->QueryInterface(IID_PPV_ARGS(&stateObjectProperties));
+		assert(SUCCEEDED(hr));
+
+		memcpy(shader_record.shader_identifier, stateObjectProperties->GetShaderIdentifier(shader_name),
+			D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+		memcpy(shader_record.root_arguments, root_argument_data, root_arguments_byte_size);
+
+		stateObjectProperties->Release();
+	}
+public:
+	void CreateRayTracingStateObject(const std::string& shader_name);
+	void CreateShaderRecordBuffers();
 };
 

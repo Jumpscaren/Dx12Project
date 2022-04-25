@@ -63,6 +63,109 @@ void dx12texturemanager::UploadTextureData(ID3D12Resource* target_resource, unsi
 	m_upload_current_offset = destination_offset;
 }
 
+Microsoft::WRL::ComPtr<ID3D12Resource> dx12texturemanager::CreateCommitedTexture(const TextureType& texture_type, const TextureInfo& texture_info, D3D12_CLEAR_VALUE* clear_value)
+{
+	D3D12_HEAP_PROPERTIES heapProperties;
+	ZeroMemory(&heapProperties, sizeof(heapProperties));
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+	D3D12_RESOURCE_DESC desc;
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	desc.Width = texture_info.width;
+	desc.Height = texture_info.height;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = static_cast<UINT16>(1);//textureInfo.mipLevels);
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	desc.Flags = D3D12_RESOURCE_FLAG_NONE; // D3D12_RESOURCE_FLAG_
+	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//desc.Flags = (D3D12_RESOURCE_FLAGS)TranslateBindFlags(textureInfo.bindingFlags);
+
+	//Set flags
+	if (texture_type & TextureType::TEXTURE_UAV)
+		desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	if (texture_type & TextureType::TEXTURE_RTV)
+		desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+	ComPtr<ID3D12Resource> texture;
+	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON,
+		clear_value, IID_PPV_ARGS(texture.GetAddressOf()));
+
+	assert(SUCCEEDED(hr));
+
+	return texture;
+}
+
+TextureResource dx12texturemanager::CreateTextureViews(ComPtr<ID3D12Resource> texture, const TextureType& texture_type)
+{
+	TextureResource new_texture_resource;
+	if (TextureType::TEXTURE_SRV & texture_type)
+	{
+		if (m_dh_shader_bindable_current_offset >= m_max_dh_shader_bindable_offset)
+			assert(false);
+
+		UINT descriptor_size_shader_bindable = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
+		heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
+
+		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(texture.Get(), nullptr, heap_handle);
+
+		++m_dh_shader_bindable_current_offset;
+
+		dx12texture texture_data = {};
+		texture_data.descriptor_heap_offset = m_dh_shader_bindable_current_offset - 1;
+		texture_data.resource_index = m_view_resources.size();
+		texture_data.texture_type = TextureType::TEXTURE_SRV;
+
+		new_texture_resource.shader_resource_view = texture_data;
+	}
+	if (TextureType::TEXTURE_UAV & texture_type)
+	{
+		if (m_dh_shader_bindable_current_offset >= m_max_dh_shader_bindable_offset)
+			assert(false);
+
+		UINT descriptor_size_shader_bindable = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
+		heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
+
+		dx12core::GetDx12Core().GetDevice()->CreateUnorderedAccessView(texture.Get(), nullptr, nullptr, heap_handle);
+
+		++m_dh_shader_bindable_current_offset;
+
+		dx12texture texture_data = {};
+		texture_data.descriptor_heap_offset = m_dh_shader_bindable_current_offset - 1;
+		texture_data.resource_index = m_view_resources.size();
+		texture_data.texture_type = TextureType::TEXTURE_UAV;
+
+		new_texture_resource.unordered_access_view = texture_data;
+	}
+	if (TextureType::TEXTURE_RTV & texture_type)
+	{
+		if (m_dh_RTV_current_offset >= m_max_dh_RTV_offset)
+			assert(false);
+
+		UINT descriptor_size_render_target_view = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_RTV->GetCPUDescriptorHandleForHeapStart();
+		heap_handle.ptr += descriptor_size_render_target_view * m_dh_RTV_current_offset;
+
+		dx12core::GetDx12Core().GetDevice()->CreateRenderTargetView(texture.Get(), nullptr, heap_handle);
+
+		++m_dh_RTV_current_offset;
+
+		dx12texture texture_data = {};
+		texture_data.descriptor_heap_offset = m_dh_RTV_current_offset - 1;
+		texture_data.resource_index = m_view_resources.size();
+		texture_data.texture_type = TextureType::TEXTURE_RTV;
+
+		new_texture_resource.render_target_view = texture_data;
+	}
+	return new_texture_resource;
+}
+
 dx12texturemanager::dx12texturemanager(UINT max_render_target_views, UINT max_depth_stencil_views, UINT max_shader_bindables)
 {
 	const UINT upload_buffer_size = 100000000;
@@ -232,32 +335,7 @@ TextureResource dx12texturemanager::CreateTexture2D(const std::string& texture_f
 {
 	TextureInfo texture_info = LoadTextureFromFile(texture_file_name);
 
-	D3D12_HEAP_PROPERTIES heapProperties;
-	ZeroMemory(&heapProperties, sizeof(heapProperties));
-	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	D3D12_RESOURCE_DESC desc;
-	desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-	desc.Width = texture_info.width;
-	desc.Height = texture_info.height;
-	desc.DepthOrArraySize = 1;
-	desc.MipLevels = static_cast<UINT16>(1);//textureInfo.mipLevels);
-	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
-	desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	desc.Flags = D3D12_RESOURCE_FLAG_NONE; // D3D12_RESOURCE_FLAG_
-	desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	//desc.Flags = (D3D12_RESOURCE_FLAGS)TranslateBindFlags(textureInfo.bindingFlags);
-
-	//Set flags
-	if (texture_type & TextureType::TEXTURE_UAV)
-		desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	ComPtr<ID3D12Resource> texture;
-	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON,
-		nullptr, IID_PPV_ARGS(texture.GetAddressOf()));
-
-	assert(SUCCEEDED(hr));
+	ComPtr<ID3D12Resource> texture = CreateCommitedTexture(texture_type, texture_info);
 
 	//Upload texture data
 	UploadTextureData(texture.Get(), texture_info.texture_data, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -265,42 +343,7 @@ TextureResource dx12texturemanager::CreateTexture2D(const std::string& texture_f
 	TextureResource new_texture_resource;
 
 	//Create specific views
-	if (TextureType::TEXTURE_SRV & texture_type)
-	{
-		UINT descriptor_size_shader_bindable = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
-		heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
-
-		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(texture.Get(), nullptr, heap_handle);
-
-		++m_dh_shader_bindable_current_offset;
-
-		dx12texture texture_data = {};
-		texture_data.descriptor_heap_offset = m_dh_shader_bindable_current_offset - 1;
-		texture_data.resource_index = m_view_resources.size();
-		texture_data.texture_type = TextureType::TEXTURE_SRV;
-
-		new_texture_resource.shader_resource_view = texture_data;
-	}
-	if (TextureType::TEXTURE_UAV & texture_type)
-	{
-		UINT descriptor_size_shader_bindable = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
-		heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
-
-		dx12core::GetDx12Core().GetDevice()->CreateUnorderedAccessView(texture.Get(), nullptr, nullptr, heap_handle);
-
-		++m_dh_shader_bindable_current_offset;
-
-		dx12texture texture_data = {};
-		texture_data.descriptor_heap_offset = m_dh_shader_bindable_current_offset - 1;
-		texture_data.resource_index = m_view_resources.size();
-		texture_data.texture_type = TextureType::TEXTURE_UAV;
-
-		new_texture_resource.unordered_access_view = texture_data;
-	}
+	new_texture_resource = CreateTextureViews(texture, texture_type);
 
 	m_view_resources.push_back(texture);
 
@@ -308,6 +351,24 @@ TextureResource dx12texturemanager::CreateTexture2D(const std::string& texture_f
 	//Fix later that we can only upload textures to the pixel shader, maybe??
 	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(texture.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	
+	return new_texture_resource;
+}
+
+TextureResource dx12texturemanager::CreateTexture2D(UINT texture_width, UINT texture_height, const TextureType& texture_type, D3D12_CLEAR_VALUE* clear_value)
+{
+	TextureInfo texture_info;
+	texture_info.width = texture_width;
+	texture_info.height = texture_height;
+
+	ComPtr<ID3D12Resource> texture = CreateCommitedTexture(texture_type, texture_info, clear_value);
+
+	TextureResource new_texture_resource;
+
+	//Create specific views
+	new_texture_resource = CreateTextureViews(texture, texture_type);
+
+	m_view_resources.push_back(texture);
+
 	return new_texture_resource;
 }
 

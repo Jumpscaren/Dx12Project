@@ -89,7 +89,12 @@ dx12buffermanager::dx12buffermanager(dx12texturemanager* texture_manager)
 	assert(SUCCEEDED(hr));
 }
 
-BufferResource dx12buffermanager::CreateBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements)
+dx12buffermanager::~dx12buffermanager()
+{
+	
+}
+
+BufferResource dx12buffermanager::CreateBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state)
 {
 	D3D12_RESOURCE_DESC desc;
 	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -102,14 +107,14 @@ BufferResource dx12buffermanager::CreateBuffer(void* data, unsigned int elementS
 	desc.SampleDesc.Count = 1;
 	desc.SampleDesc.Quality = 0;
 	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	desc.Flags = flags;
 
 	D3D12_HEAP_PROPERTIES heap_properties;
 	ZeroMemory(&heap_properties, sizeof(heap_properties));
 	heap_properties.Type = D3D12_HEAP_TYPE_DEFAULT;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
-	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON,
+	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &desc, initial_state,
 		nullptr, IID_PPV_ARGS(buffer.GetAddressOf()));
 	assert(SUCCEEDED(hr));
 
@@ -117,6 +122,39 @@ BufferResource dx12buffermanager::CreateBuffer(void* data, unsigned int elementS
 
 	BufferResource buffer_resource;
 	buffer_resource.buffer = buffer;
+	buffer_resource.element_size = elementSize;
+	buffer_resource.nr_of_elements = nrOfElements;
+	return buffer_resource;
+}
+
+BufferResource dx12buffermanager::CreateBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, const D3D12_HEAP_TYPE& heap_type)
+{
+	D3D12_RESOURCE_DESC desc;
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+	desc.Width = buffer_size;
+	desc.Height = 1;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = 1;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.Flags = flags;
+
+	D3D12_HEAP_PROPERTIES heap_properties;
+	ZeroMemory(&heap_properties, sizeof(heap_properties));
+	heap_properties.Type = heap_type;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
+	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &desc, initial_state,
+		nullptr, IID_PPV_ARGS(buffer.GetAddressOf()));
+	assert(SUCCEEDED(hr));
+
+	BufferResource buffer_resource;
+	buffer_resource.buffer = buffer;
+	buffer_resource.element_size = buffer_size;
+	buffer_resource.nr_of_elements = 1;//nrOfElements;
 	return buffer_resource;
 }
 

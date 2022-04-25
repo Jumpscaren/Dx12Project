@@ -37,6 +37,15 @@ private:
 
 	dx12buffermanager* m_buffer_manager;
 
+//Raytracing
+private:
+	BufferResource m_bottom_level_result_acceleration_structure_buffer;
+	BufferResource m_bottom_level_scratch_acceleration_structure_buffer; //bottomLevelScratchAccelerationStructureBuffer
+	BufferResource m_top_level_instance_buffer;//topLevelInstanceBuffer
+	BufferResource m_top_level_result_acceleration_structure_buffer; //topLevelResultAccelerationStructureBuffer
+	BufferResource m_top_level_scratch_acceleration_structure_buffer;
+	TextureResource m_output_uav;
+
 private:
 	static dx12core s_instance;
 private:
@@ -64,4 +73,13 @@ public:
 	void PreDraw();
 	void Draw();
 	void FinishDraw();
+
+//Raytracing
+private:
+	void BuildBottomLevelAccelerationStructure(BufferResource* vertex_buffer);
+	void BuildTopLevelAccelerationStructure();
+public:
+	void CreateRaytracingStructure(BufferResource* vertex_buffer);
+	ID3D12Resource* GetTopLevelResultAccelerationStructureBuffer();
+	TextureResource GetOutputUAV();
 };

@@ -63,5 +63,6 @@
   <ItemGroup>
     <FxCompile Include="VertexShader1.hlsl" />
     <FxCompile Include="PixelShader1.hlsl" />
+    <FxCompile Include="RayTracingShaders.hlsl" />
   </ItemGroup>
 </Project>

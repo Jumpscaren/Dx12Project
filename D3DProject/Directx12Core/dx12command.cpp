@@ -40,6 +40,20 @@ void dx12command::TransistionBuffer(ID3D12Resource* resource, D3D12_RESOURCE_STA
 	m_command_list->ResourceBarrier(1, &barrier);
 }
 
+void dx12command::ResourceBarrier(const D3D12_RESOURCE_BARRIER_TYPE& barrier_type, ID3D12Resource* resource)
+{
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = barrier_type;
+
+	switch (barrier_type)
+	{
+	case D3D12_RESOURCE_BARRIER_TYPE_UAV:
+		barrier.UAV.pResource = resource;
+		break;
+	}
+	m_command_list->ResourceBarrier(1, &barrier);
+}
+
 void dx12command::CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION* destination, D3D12_TEXTURE_COPY_LOCATION* source)
 {
 	m_command_list->CopyTextureRegion(destination, 0, 0, 0, source, nullptr);
@@ -173,4 +187,9 @@ void dx12command::SetDescriptorTable(RootRenderBinding* binding, ID3D12Descripto
 void dx12command::Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object)
 {
 	m_command_list->DrawInstanced(vertices, nr_of_objects, start_vertex, start_object);
+}
+
+void dx12command::BuildRaytracingAccelerationStructure(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc)
+{
+	m_command_list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 }
