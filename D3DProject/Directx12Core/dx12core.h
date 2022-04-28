@@ -8,6 +8,7 @@
 #include "dx12texturemanager.h"
 #include "dx12renderpipeline.h"
 #include "dx12buffermanager.h"
+#include "dx12rayobjectmanager.h"
 
 class dx12core
 {
@@ -36,6 +37,8 @@ private:
 	dx12renderpipeline* m_render_pipeline;
 
 	dx12buffermanager* m_buffer_manager;
+
+	dx12rayobjectmanager* m_ray_object_manager;
 
 //Raytracing
 private:
@@ -68,6 +71,7 @@ public:
 	dx12texturemanager* GetTextureManager();
 	dx12buffermanager* GetBufferManager();
 	ID3D12CommandQueue* GetCommandQueue();
+	dx12rayobjectmanager* GetRayObjectManager();
 	void SetRenderPipeline(dx12renderpipeline* render_pipeline);
 	void Show();
 	void PreDraw();
@@ -82,4 +86,7 @@ public:
 	void CreateRaytracingStructure(BufferResource* vertex_buffer);
 	ID3D12Resource* GetTopLevelResultAccelerationStructureBuffer();
 	TextureResource GetOutputUAV();
+	void PreDispatchRays();
+	void DispatchRays();
+	void SetTopLevelTransform(float rotation);
 };

@@ -149,6 +149,8 @@
     <ClCompile Include="Directx12Core\dx12texturemanager.cpp" />
     <ClCompile Include="Directx12Core\dx12buffermanager.cpp" />
     <ClCompile Include="Directx12Core\dx12renderpipeline.cpp" />
+    <ClCompile Include="Directx12Core\dx12rayobjectmanager.cpp" />
+    <ClCompile Include="JRaytracing.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
@@ -159,6 +161,9 @@
     <ClInclude Include="Directx12Core\stb_image.h" />
     <ClInclude Include="Directx12Core\dx12buffermanager.h" />
     <ClInclude Include="Directx12Core\dx12renderpipeline.h" />
+    <ClInclude Include="Directx12Core\dx12rayobjectmanager.h" />
+    <ClInclude Include="JRaytracing.h" />
+    <ClInclude Include="RayTracingShaderHeader.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>

@@ -315,18 +315,20 @@ RenderObject* dx12renderpipeline::CreateRenderObject()
 	return render_object;
 }
 
-void dx12renderpipeline::CreateRayTracingStateObject(const std::string& shader_name)
+void dx12renderpipeline::CreateRayTracingStateObject(const std::string& shader_name, const std::wstring& hit_shader_name, UINT payload_size, UINT max_bounces)
 {
 	D3D12_STATE_SUBOBJECT stateSubobjects[6];
 
 	D3D12_RAYTRACING_SHADER_CONFIG shaderConfig;
-	shaderConfig.MaxPayloadSizeInBytes = sizeof(float) * 3;
+	shaderConfig.MaxPayloadSizeInBytes = payload_size;
+
+	// makes it barycentric coordinates
 	shaderConfig.MaxAttributeSizeInBytes = sizeof(float) * 2;
 	stateSubobjects[0].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
 	stateSubobjects[0].pDesc = &shaderConfig;
 
 	D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig;
-	pipelineConfig.MaxTraceRecursionDepth = 1;
+	pipelineConfig.MaxTraceRecursionDepth = max_bounces + 1;
 	stateSubobjects[1].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
 	stateSubobjects[1].pDesc = &pipelineConfig;
 
@@ -357,7 +359,7 @@ void dx12renderpipeline::CreateRayTracingStateObject(const std::string& shader_n
 	hitGroupDesc.HitGroupExport = L"HitGroup";
 	hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
 	hitGroupDesc.AnyHitShaderImport = nullptr;
-	hitGroupDesc.ClosestHitShaderImport = L"ClosestHitShader";
+	hitGroupDesc.ClosestHitShaderImport = hit_shader_name.c_str();//L"ClosestHitShader";
 	hitGroupDesc.IntersectionShaderImport = nullptr;
 	stateSubobjects[5].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
 	stateSubobjects[5].pDesc = &hitGroupDesc;
@@ -371,13 +373,13 @@ void dx12renderpipeline::CreateRayTracingStateObject(const std::string& shader_n
 	assert(SUCCEEDED(hr));
 }
 
-void dx12renderpipeline::CreateShaderRecordBuffers()
+void dx12renderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name)
 {
 	const int ROOT_ARGUMENT_SIZE = 32;
 	unsigned char root_argument_data[ROOT_ARGUMENT_SIZE];
 
-	auto root_arg_1 = dx12core::GetDx12Core().GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
-	D3D12_CPU_DESCRIPTOR_HANDLE uav_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetCPUDescriptorHandleForHeapStart();
+	auto root_arg_1 = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();//dx12core::GetDx12Core().GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
+	D3D12_GPU_DESCRIPTOR_HANDLE uav_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
 	UINT shader_bindable_size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	uav_handle.ptr += dx12core::GetDx12Core().GetOutputUAV().unordered_access_view.descriptor_heap_offset * shader_bindable_size;
 	auto root_arg_2 = uav_handle;
@@ -385,29 +387,59 @@ void dx12renderpipeline::CreateShaderRecordBuffers()
 	memcpy(root_argument_data + sizeof(root_arg_1), &root_arg_2, sizeof(root_arg_2));
 
 	//Ray Gen
-	ShaderRecord<ROOT_ARGUMENT_SIZE> ray_gen_record_data;
+	ShaderRecordF<ROOT_ARGUMENT_SIZE> ray_gen_record_data;
 
-	CreateShaderRecord(ray_gen_record_data, L"RayGenerationShader", root_argument_data);
+	CreateShaderRecord(ray_gen_record_data, ray_generation_shader_name.c_str(), root_argument_data);
 
-	ray_gen_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&ray_gen_record_data), sizeof(ray_gen_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
+	m_ray_gen_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&ray_gen_record_data), sizeof(ray_gen_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
 
-	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(ray_gen_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(m_ray_gen_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	//Miss
-	ShaderRecord<ROOT_ARGUMENT_SIZE> miss_record_data;
-	CreateShaderRecord(miss_record_data, L"MissShader", root_argument_data);
+	ShaderRecordF<ROOT_ARGUMENT_SIZE> miss_record_data;
+	CreateShaderRecord(miss_record_data, miss_shader_name.c_str(), root_argument_data);
 
-	miss_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&miss_record_data), sizeof(miss_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
+	m_miss_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&miss_record_data), sizeof(miss_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
 
-	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(miss_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(m_miss_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
 	//Hit
-	ShaderRecord<ROOT_ARGUMENT_SIZE> hit_record_data;
+	ShaderRecordF<ROOT_ARGUMENT_SIZE> hit_record_data;
 	CreateShaderRecord(hit_record_data, L"HitGroup", root_argument_data);
 
-	hit_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&hit_record_data), sizeof(hit_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
+	m_hit_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&hit_record_data), sizeof(hit_record_data), 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
 
-	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(hit_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(m_hit_record.buffer.buffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+}
+
+void dx12renderpipeline::CheckIfRaytracingRenderPipeline()
+{
+	assert(m_raytracing_state_object.Get());
+}
+
+ID3D12StateObject* dx12renderpipeline::GetRaytracingStateObject()
+{
+	return m_raytracing_state_object.Get();
+}
+
+ID3D12RootSignature* dx12renderpipeline::GetRaytracingRootSignature()
+{
+	return m_raytracing_root_signature.Get();
+}
+
+RayGenerationShaderRecordF<32>* dx12renderpipeline::RayGenerationShaderRecord()
+{
+	return &m_ray_gen_record;
+}
+
+ShaderTableF<32, 1>* dx12renderpipeline::GetMissShaderRecord()
+{
+	return &m_miss_record;
+}
+
+ShaderTableF<32, 1>* dx12renderpipeline::GetHitShaderRecord()
+{
+	return &m_hit_record;
 }
 
 RootRenderBinding* RenderObject::AddResource(BindingType binding_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space)

@@ -5,6 +5,8 @@
 
 #include "dx12core.h"
 
+#include <iostream>
+
 using Microsoft::WRL::ComPtr;
 
 TextureInfo dx12texturemanager::LoadTextureFromFile(const std::string& texture_file_name, UINT channels) const

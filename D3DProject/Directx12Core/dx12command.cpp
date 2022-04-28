@@ -64,6 +64,11 @@ void dx12command::CopyBufferRegion(ID3D12Resource* destination_buffer, ID3D12Res
 	m_command_list->CopyBufferRegion(destination_buffer, destination_offset, source_buffer, source_offset, size);
 }
 
+void dx12command::CopyResource(ID3D12Resource* destination_resource, ID3D12Resource* source_resource)
+{
+	m_command_list->CopyResource(destination_resource, source_resource);
+}
+
 void dx12command::Execute()
 {
 	HRESULT hr = m_command_list->Close();
@@ -106,9 +111,19 @@ void dx12command::SetRootSignature(ID3D12RootSignature* root_signature)
 	m_command_list->SetGraphicsRootSignature(root_signature);
 }
 
+void dx12command::SetComputeRootSignature(ID3D12RootSignature* root_signature)
+{
+	m_command_list->SetComputeRootSignature(root_signature);
+}
+
 void dx12command::SetPipelineState(ID3D12PipelineState* pipeline_state)
 {
 	m_command_list->SetPipelineState(pipeline_state);
+}
+
+void dx12command::SetStateObject(ID3D12StateObject* state_object)
+{
+	m_command_list->SetPipelineState1(state_object);
 }
 
 void dx12command::ClearRenderTargetView(ID3D12DescriptorHeap* descriptor_heap, UINT offset)
@@ -189,7 +204,12 @@ void dx12command::Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UIN
 	m_command_list->DrawInstanced(vertices, nr_of_objects, start_vertex, start_object);
 }
 
-void dx12command::BuildRaytracingAccelerationStructure(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc)
+void dx12command::DispatchRays(D3D12_DISPATCH_RAYS_DESC* description)
 {
-	m_command_list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+	m_command_list->DispatchRays(description);
+}
+
+void dx12command::BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* desc)
+{
+	m_command_list->BuildRaytracingAccelerationStructure(desc, 0, nullptr);
 }

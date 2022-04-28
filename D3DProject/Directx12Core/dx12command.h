@@ -22,13 +22,16 @@ public:
 	void ResourceBarrier(const D3D12_RESOURCE_BARRIER_TYPE& barrier_type, ID3D12Resource* resource);
 	void CopyTextureRegion(D3D12_TEXTURE_COPY_LOCATION* destination, D3D12_TEXTURE_COPY_LOCATION* source);
 	void CopyBufferRegion(ID3D12Resource* destination_buffer, ID3D12Resource* source_buffer, UINT destination_offset, UINT source_offset, UINT size);
+	void CopyResource(ID3D12Resource* destination_resource, ID3D12Resource* source_resource);
 	void Execute();
 	void Signal();
 	void Wait();
 	void SignalAndWait();
 	void SetDescriptorHeap(ID3D12DescriptorHeap* descriptor_heap);
 	void SetRootSignature(ID3D12RootSignature* root_signature);
+	void SetComputeRootSignature(ID3D12RootSignature* root_signature);
 	void SetPipelineState(ID3D12PipelineState* pipeline_state);
+	void SetStateObject(ID3D12StateObject* state_object);
 	void ClearRenderTargetView(ID3D12DescriptorHeap* descriptor_heap, UINT offset);
 	void ClearDepthStencilView(ID3D12DescriptorHeap* descriptor_heap, UINT offset);
 	void SetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY topology);
@@ -39,6 +42,7 @@ public:
 	void SetShaderResourceView(RootRenderBinding* binding, ID3D12Resource* resource);
 	void SetDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource);
 	void Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object);
-	void BuildRaytracingAccelerationStructure(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC& desc);
+	void DispatchRays(D3D12_DISPATCH_RAYS_DESC* description);
+	void BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* desc);
 };
 

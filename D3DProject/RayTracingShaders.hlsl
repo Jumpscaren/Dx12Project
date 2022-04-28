@@ -1,3 +1,5 @@
+#include "RayTracingShaderHeader.h"
+
 RaytracingAccelerationStructure scene : register(t0);
 RWTexture2D<float4> outputTexture : register(u0);
 
@@ -5,14 +7,15 @@ static const float3 HIT_COLOUR = float3(0.0f, 0.0f, 1.0f);
 static const float3 MISS_COLOUR = float3(1.0f, 0.0f, 0.0f);
 static const float3 CLEAR_COLOUR = float3(0.0f, 0.0f, 0.0f);
 
-struct RayPayloadData
-{
-	float3 colour;
-};
+//struct RayPayloadData
+//{
+//	float3 colour;
+//};
 
 [shader("raygeneration")]
 void RayGenerationShader()
 {
+
 	uint3 dispatchDim = DispatchRaysDimensions();
 	uint2 currentPixel = DispatchRaysIndex().xy;
 	float3 origin = float3(-1 + (2.0f * currentPixel.x) / dispatchDim.x,
@@ -31,6 +34,8 @@ void RayGenerationShader()
 
 	if(all(outputTexture[currentPixel].xyz == CLEAR_COLOUR) || all(payload.colour == HIT_COLOUR))
 		outputTexture[currentPixel] = float4(payload.colour, 1.0f);
+
+	//outputTexture[currentPixel] = float4(payload, 1.0f);
 }
 
 [shader("miss")]

@@ -1,13 +1,21 @@
 #include <iostream>
 #include "Window.h"
 #include "Directx12Core/dx12core.h"
+#include "RayTracingShaderHeader.h"
 
 int main()
 {
 	std::cout << "Hello World\n";
 
 	Window window(1280, 720, L"Project", L"Project");
+	
 	dx12core::GetDx12Core().Init(window.GetWindowHandle(), 2);
+
+	TCHAR pwd[MAX_PATH];
+	GetCurrentDirectory(MAX_PATH, pwd);
+	std::wstring gf(pwd);
+	std::string of(gf.begin(), gf.end());
+	std::cout << of.c_str() << "\n";
 
 	TextureResource texture = dx12core::GetDx12Core().GetTextureManager()->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
 
@@ -56,14 +64,18 @@ int main()
 
 	dx12core::GetDx12Core().CreateRaytracingStructure(&vertex);
 
+	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(&vertex);
+
 	dx12renderpipeline* raytracing_render_pipeline = new dx12renderpipeline();
-	raytracing_render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
+	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false, D3D12_ROOT_PARAMETER_TYPE_SRV);
 	raytracing_render_pipeline->AddUnorderedAccess(0, D3D12_SHADER_VISIBILITY_ALL, false);
-	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso");
-	raytracing_render_pipeline->CreateShaderRecordBuffers();
+	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), 0);
+	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader");
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
+
+	float rotation = 0;
 
 	bool window_exist = true;
 	while (window_exist)
@@ -76,14 +88,21 @@ int main()
 		dx12core::GetDx12Core().SetRenderPipeline(render_pipeline);
 		dx12core::GetDx12Core().PreDraw();
 		dx12core::GetDx12Core().Draw();
-		dx12core::GetDx12Core().FinishDraw();
+
+		rotation += 0.05f;
+		dx12core::GetDx12Core().SetTopLevelTransform(rotation);
 
 		//Raytracing
 		dx12core::GetDx12Core().SetRenderPipeline(raytracing_render_pipeline);
+		dx12core::GetDx12Core().PreDispatchRays();
+		dx12core::GetDx12Core().DispatchRays();
 
+
+		dx12core::GetDx12Core().FinishDraw();
 	}
 
 	delete render_pipeline;
+	delete raytracing_render_pipeline;
 
 	//dx12core::GetDx12Core();
 
