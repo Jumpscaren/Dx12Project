@@ -30,6 +30,12 @@ int main()
 		{{0.0f, 0.5f, 0.0f}, {0.5f, 0.0f}},
 		{{0.5f, -0.5f, 0.0f}, {1.0f, 1.0f}}
 	};
+	SimpleVertex triangle_2[3] =
+	{
+		{{-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+		{{0.0f, 1.0f, 0.0f}, {0.5f, 0.0f}},
+		{{1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}}
+	};
 	SimpleVertex quad[6] =
 	{
 		{{-0.75f, -0.75f, 0.5f}, {0.0f, 1.0f}},
@@ -41,8 +47,9 @@ int main()
 		{{0.75f, -0.75f, 0.5f}, {1.0f, 1.0f}},
 	};
 
-	BufferResource vertex = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle, sizeof(SimpleVertex), 3);
-	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(SimpleVertex), 6);
+	BufferResource vertex = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
+	BufferResource vertex_2 = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle_2, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
+	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(SimpleVertex), 6, TextureType::TEXTURE_SRV);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
@@ -64,9 +71,14 @@ int main()
 
 	dx12core::GetDx12Core().CreateRaytracingStructure(&vertex);
 
-	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(&vertex);
+	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex);
+	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
+
+	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
+	RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
 
 	dx12renderpipeline* raytracing_render_pipeline = new dx12renderpipeline();
+	//raytracing_render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);//, D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
 	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false, D3D12_ROOT_PARAMETER_TYPE_SRV);
 	raytracing_render_pipeline->AddUnorderedAccess(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), 0);

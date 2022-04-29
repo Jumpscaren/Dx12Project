@@ -374,30 +374,66 @@ TextureResource dx12texturemanager::CreateTexture2D(UINT texture_width, UINT tex
 	return new_texture_resource;
 }
 
-dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements)
+dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements, TextureType texture_type)
 {
 	UINT descriptor_size_shader_bindable = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	//Create shader resource view
-	D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
-	heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
+	dx12texture structured_buffer = {};
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-	shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-	shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
-	shader_resource_view_desc.Buffer.FirstElement = 0;
-	shader_resource_view_desc.Buffer.StructureByteStride = element_size;
-	shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-	dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(resource, &shader_resource_view_desc, heap_handle);
+	if (texture_type & TextureType::TEXTURE_SRV)
+	{
+		//Create shader resource view
+		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
+		heap_handle.ptr += descriptor_size_shader_bindable * m_dh_shader_bindable_current_offset;
 
-	dx12texture structured_buffer;
-	structured_buffer.descriptor_heap_offset = m_dh_shader_bindable_current_offset;
-	structured_buffer.resource_index = -1;
-	structured_buffer.texture_type = TextureType::TEXTURE_CBV;
+		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+		shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
+		shader_resource_view_desc.Buffer.FirstElement = 0;
+		shader_resource_view_desc.Buffer.StructureByteStride = element_size;
+		shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(resource, &shader_resource_view_desc, heap_handle);
 
-	++m_dh_shader_bindable_current_offset;
+		structured_buffer.descriptor_heap_offset = m_dh_shader_bindable_current_offset;
+		structured_buffer.resource_index = -1;
+		structured_buffer.texture_type = TextureType::TEXTURE_CBV;
+
+		++m_dh_shader_bindable_current_offset;
+	}
+	else if (texture_type & TextureType::TEXTURE_UAV)
+	{
+		//Create unorded access view
+		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
+		heap_handle.ptr += descriptor_size_shader_bindable * (m_max_dh_shader_bindable_offset - 1);
+		heap_handle.ptr -= descriptor_size_shader_bindable * m_acceleration_counter;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
+		shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
+		shader_resource_view_desc.Buffer.FirstElement = 0;
+		shader_resource_view_desc.Buffer.StructureByteStride = element_size;
+		shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(resource, &shader_resource_view_desc, heap_handle);
+
+		//D3D12_UNORDERED_ACCESS_VIEW_DESC unorded_access_view_desc = {};
+		//unorded_access_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+		//unorded_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER; 
+		//unorded_access_view_desc.Buffer.NumElements = nr_of_elements;
+		//unorded_access_view_desc.Buffer.FirstElement = 0;
+		//unorded_access_view_desc.Buffer.StructureByteStride = element_size;
+		//unorded_access_view_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+		//dx12core::GetDx12Core().GetDevice()->CreateUnorderedAccessView(resource, nullptr, &unorded_access_view_desc, heap_handle);
+
+		structured_buffer.descriptor_heap_offset = m_acceleration_counter;
+		structured_buffer.resource_index = -1;
+		structured_buffer.texture_type = TextureType::TEXTURE_CBV;
+
+		++m_acceleration_counter;
+	}
 
 	return structured_buffer;
 }

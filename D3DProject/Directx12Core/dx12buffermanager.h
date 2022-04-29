@@ -21,6 +21,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_upload_buffer;
 	UINT64 m_upload_current_offset;
 
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_temp;
+
 	void UploadBufferData(ID3D12Resource* upload_resource, unsigned char* data, UINT alignment);
 
 public:
@@ -29,6 +31,7 @@ public:
 
 	BufferResource CreateBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, const D3D12_RESOURCE_FLAGS& flags = D3D12_RESOURCE_FLAG_NONE, const D3D12_RESOURCE_STATES& initial_state = D3D12_RESOURCE_STATE_COMMON);
 	BufferResource CreateBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, const D3D12_HEAP_TYPE& heap_type = D3D12_HEAP_TYPE_DEFAULT);
-	BufferResource CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements);
+	BufferResource CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, TextureType texture_type);
+	BufferResource CreateStructuredBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, TextureType texture_type, const D3D12_HEAP_TYPE& heap_type = D3D12_HEAP_TYPE_DEFAULT);
 };
 

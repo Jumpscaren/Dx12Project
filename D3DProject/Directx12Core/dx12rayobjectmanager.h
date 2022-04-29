@@ -28,13 +28,18 @@ private:
 	std::vector<TopLevelAccelerationStructures> m_top_level_acceleration_structures;
 	std::map<UINT64, RayTracingObject> m_existing_objects;
 
+	std::vector<BufferResource> m_meshes;
+
 private:
 	UINT BuildBottomLevelAccelerationStructure(BufferResource* vertex_buffer);
 	UINT BuildTopLevelAccelerationStructure(UINT bottom_level_index);
+
+	UINT BuildBottomLevelAcceleratonStructure();
 public:
 	dx12rayobjectmanager();
 	~dx12rayobjectmanager();
-	RayTracingObject CreateRayTracingObject(BufferResource* vertex_buffer);
+	void AddMesh(BufferResource mesh_buffer);
+	RayTracingObject CreateRayTracingObject();
 	ID3D12Resource* GetTopLevelResultAccelerationStructureBuffer();
 	ID3D12Resource* GetTopLevelScratchAccelerationStructureBuffer();
 	ID3D12Resource* GetTopLevelInstanceBuffer();

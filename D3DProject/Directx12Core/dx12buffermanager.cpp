@@ -158,10 +158,17 @@ BufferResource dx12buffermanager::CreateBuffer(UINT buffer_size, const D3D12_RES
 	return buffer_resource;
 }
 
-BufferResource dx12buffermanager::CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements)
+BufferResource dx12buffermanager::CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, TextureType texture_type)
 {
 	BufferResource buffer_resource = CreateBuffer(data, elementSize, nrOfElements);
-	buffer_resource.structured_buffer = m_texture_manager->CreateStructuredBuffer(buffer_resource.buffer.Get(), elementSize, nrOfElements);
+	buffer_resource.structured_buffer = m_texture_manager->CreateStructuredBuffer(buffer_resource.buffer.Get(), elementSize, nrOfElements, texture_type);
+	return buffer_resource;
+}
+
+BufferResource dx12buffermanager::CreateStructuredBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, TextureType texture_type, const D3D12_HEAP_TYPE& heap_type)
+{
+	BufferResource buffer_resource = CreateBuffer(buffer_size, flags, initial_state, heap_type);//CreateBuffer(data, elementSize, nrOfElements);
+	buffer_resource.structured_buffer = m_texture_manager->CreateStructuredBuffer(buffer_resource.buffer.Get(), buffer_size, 1, texture_type);
 	return buffer_resource;
 }
 

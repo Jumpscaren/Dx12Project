@@ -7,19 +7,32 @@ dx12rayobjectmanager::dx12rayobjectmanager()
 
 dx12rayobjectmanager::~dx12rayobjectmanager()
 {
+	m_bottom_level_acceleration_structures.clear();
+	m_top_level_acceleration_structures.clear();
+	m_meshes.clear();
 }
 
-RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(BufferResource* vertex_buffer)
+void dx12rayobjectmanager::AddMesh(BufferResource mesh_buffer)
 {
-    UINT bottom_level_index = BuildBottomLevelAccelerationStructure(vertex_buffer);
-    UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
+	m_meshes.push_back(mesh_buffer);
+}
+
+RayTracingObject dx12rayobjectmanager::CreateRayTracingObject()
+{
+	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
+	UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
+
+    //UINT bottom_level_index = BuildBottomLevelAccelerationStructure(vertex_buffer);
+    //UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
 
 	RayTracingObject object = { top_level_index };
 
-	//If it does not already exist then we insert it
-	auto existing_object_it = m_existing_objects.find((UINT64)vertex_buffer->buffer.Get());
-	if (existing_object_it == m_existing_objects.end())
-		m_existing_objects.insert({ (UINT64)vertex_buffer->buffer.Get(), object });
+	////If it does not already exist then we insert it
+	//auto existing_object_it = m_existing_objects.find((UINT64)vertex_buffer->buffer.Get());
+	//if (existing_object_it == m_existing_objects.end())
+	//	m_existing_objects.insert({ (UINT64)vertex_buffer->buffer.Get(), object });
+
+	m_meshes.clear();
 
 	return object;
 }
@@ -134,7 +147,7 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(UINT bottom_level_
 	dx12core::GetDx12Core().GetDevice()->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &prebuildInfo);
 
 
-	top_level_acceleration_structure.result_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+	top_level_acceleration_structure.result_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(prebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, TextureType::TEXTURE_UAV);//dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 	top_level_acceleration_structure.scratch_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accelerationStructureDesc;
@@ -152,4 +165,53 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(UINT bottom_level_
 	m_top_level_acceleration_structures.push_back(top_level_acceleration_structure);
 
 	return m_top_level_acceleration_structures.size() - 1;
+}
+
+UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure()
+{
+	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_meshes.size()); //D3D12_RAYTRACING_GEOMETRY_DESC geometryDescriptions[1];
+
+	for (int i = 0; i < m_meshes.size(); ++i)
+	{
+		geometry_descriptions[i].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		geometry_descriptions[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		geometry_descriptions[i].Triangles.Transform3x4 = NULL;
+		geometry_descriptions[i].Triangles.IndexFormat = DXGI_FORMAT_UNKNOWN;
+		geometry_descriptions[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		geometry_descriptions[i].Triangles.IndexCount = 0;
+		geometry_descriptions[i].Triangles.VertexCount = m_meshes[i].nr_of_elements; //vertex_buffer->nr_of_elements;
+		geometry_descriptions[i].Triangles.IndexBuffer = NULL;
+		geometry_descriptions[i].Triangles.VertexBuffer.StartAddress = m_meshes[i].buffer->GetGPUVirtualAddress();
+		geometry_descriptions[i].Triangles.VertexBuffer.StrideInBytes = m_meshes[i].element_size;
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs;
+	bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+	bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	bottomLevelInputs.NumDescs = m_meshes.size();
+	bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	bottomLevelInputs.pGeometryDescs = geometry_descriptions.data();
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO prebuildInfo;
+	dx12core::GetDx12Core().GetDevice()->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &prebuildInfo);
+
+	BottomLevelAccelerationStructures bottom_level_acceleration_structure;
+	bottom_level_acceleration_structure.result_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+	bottom_level_acceleration_structure.scratch_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accelerationStructureDesc;
+	accelerationStructureDesc.DestAccelerationStructureData =
+		bottom_level_acceleration_structure.result_buffer.buffer->GetGPUVirtualAddress();
+	accelerationStructureDesc.Inputs = bottomLevelInputs;
+	accelerationStructureDesc.SourceAccelerationStructureData = NULL;
+	accelerationStructureDesc.ScratchAccelerationStructureData =
+		bottom_level_acceleration_structure.scratch_buffer.buffer->GetGPUVirtualAddress();
+
+	dx12core::GetDx12Core().GetDirectCommand()->BuildRaytracingAccelerationStructure(&accelerationStructureDesc);
+
+	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
+
+	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
+
+	return m_bottom_level_acceleration_structures.size() - 1;
 }

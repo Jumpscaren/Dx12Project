@@ -42,6 +42,9 @@ struct TextureInfo
 };
 class dx12texturemanager
 {
+public:
+	//Temp
+	UINT m_acceleration_counter = 0;
 private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dh_RTV;
 	UINT m_dh_RTV_current_offset = 0;
@@ -83,7 +86,7 @@ public:
 	TextureResource CreateTexture2D(const std::string& texture_file_name, const TextureType& texture_type);
 	TextureResource CreateTexture2D(UINT texture_width, UINT texture_height, const TextureType& texture_type, D3D12_CLEAR_VALUE* clear_value = nullptr);
 
-	dx12texture CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements);
+	dx12texture CreateStructuredBuffer(ID3D12Resource* resource, UINT element_size, UINT nr_of_elements, TextureType texture_type);
 
 	ID3D12Resource* GetTextureResource(UINT resource_index);
 
