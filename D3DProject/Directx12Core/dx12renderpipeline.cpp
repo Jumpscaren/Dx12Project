@@ -380,11 +380,11 @@ void dx12renderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_gener
 
 	UINT shader_bindable_size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-	//D3D12_GPU_DESCRIPTOR_HANDLE top_level_structures_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
-	//top_level_structures_handle.ptr += (100 - 1) * shader_bindable_size;
-	//auto root_arg_1 = top_level_structures_handle;
+	D3D12_GPU_DESCRIPTOR_HANDLE top_level_structures_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
+	top_level_structures_handle.ptr += (50 - 1) * shader_bindable_size;
+	auto root_arg_1 = top_level_structures_handle;
 	// 
-	auto root_arg_1 = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
+	//auto root_arg_1 = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
 	//auto root_arg_1 = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelInstanceBuffer()->GetGPUVirtualAddress();
 	
 	D3D12_GPU_DESCRIPTOR_HANDLE uav_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();

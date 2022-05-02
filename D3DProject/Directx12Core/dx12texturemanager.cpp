@@ -410,14 +410,18 @@ dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource,
 		heap_handle.ptr -= descriptor_size_shader_bindable * m_acceleration_counter;
 
 		D3D12_SHADER_RESOURCE_VIEW_DESC shader_resource_view_desc = {};
-		shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+		shader_resource_view_desc.RaytracingAccelerationStructure.Location = resource->GetGPUVirtualAddress();
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
-		shader_resource_view_desc.Buffer.FirstElement = 0;
-		shader_resource_view_desc.Buffer.StructureByteStride = element_size;
-		shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(resource, &shader_resource_view_desc, heap_handle);
+		shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+		//shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
+		//shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		//shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
+		//shader_resource_view_desc.Buffer.FirstElement = 0;
+		//shader_resource_view_desc.Buffer.StructureByteStride = element_size;
+		//shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(nullptr, &shader_resource_view_desc, heap_handle);
 
 		//D3D12_UNORDERED_ACCESS_VIEW_DESC unorded_access_view_desc = {};
 		//unorded_access_view_desc.Format = DXGI_FORMAT_UNKNOWN;
