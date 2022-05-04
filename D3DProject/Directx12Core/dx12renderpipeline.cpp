@@ -20,11 +20,11 @@ ID3DBlob* dx12renderpipeline::LoadCSO(const std::string& filepath)
 	return cso_blob;
 }
 
-void dx12renderpipeline::AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE range_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space)
+void dx12renderpipeline::AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE range_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT descriptors, UINT register_space)
 {
 	D3D12_DESCRIPTOR_RANGE descriptor_range;
 	descriptor_range.RangeType = range_type;
-	descriptor_range.NumDescriptors = 1;
+	descriptor_range.NumDescriptors = descriptors;
 	descriptor_range.BaseShaderRegister = binding_slot;
 	descriptor_range.RegisterSpace = register_space;
 	descriptor_range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -113,7 +113,7 @@ void dx12renderpipeline::AddStructuredBuffer(UINT binding_slot, D3D12_SHADER_VIS
 
 	new_root_binding.binding_type = BindingType::STRUCTURED_BUFFER;
 
-	AddDescriptorTable(range_type, binding_slot, shader_type, global, register_space);
+	AddDescriptorTable(range_type, binding_slot, shader_type, global, 1, register_space);
 
 	if (global)
 		m_global_root_render_binding.push_back(new_root_binding);
@@ -121,7 +121,7 @@ void dx12renderpipeline::AddStructuredBuffer(UINT binding_slot, D3D12_SHADER_VIS
 		m_object_root_render_binding.push_back(new_root_binding);
 }
 
-void dx12renderpipeline::AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space)
+void dx12renderpipeline::AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT descriptors, UINT register_space)
 {
 	RootRenderBinding new_root_binding;
 
@@ -133,7 +133,7 @@ void dx12renderpipeline::AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIB
 
 	new_root_binding.binding_type = BindingType::SHADER_RESOURCE;
 
-	AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, binding_slot, shader_type, global, register_space);
+	AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, binding_slot, shader_type, global, descriptors, register_space);
 
 	if (global)
 		m_global_root_render_binding.push_back(new_root_binding);
@@ -153,7 +153,7 @@ void dx12renderpipeline::AddUnorderedAccess(UINT binding_slot, D3D12_SHADER_VISI
 
 	new_root_binding.binding_type = BindingType::UNORDERED_ACCESS;
 
-	AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, binding_slot, shader_type, global, register_space);
+	AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, binding_slot, shader_type, global, 1, register_space);
 
 	if (global)
 		m_global_root_render_binding.push_back(new_root_binding);
@@ -373,15 +373,17 @@ void dx12renderpipeline::CreateRayTracingStateObject(const std::string& shader_n
 	assert(SUCCEEDED(hr));
 }
 
-void dx12renderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name)
+void dx12renderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, RayTracingObject* ray_tracing_object)
 {
 	const int ROOT_ARGUMENT_SIZE = 32;
 	unsigned char root_argument_data[ROOT_ARGUMENT_SIZE];
 
 	UINT shader_bindable_size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+	BufferResource top_level_structure = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelResultAccelerationStructureBuffer(*ray_tracing_object);
+
 	D3D12_GPU_DESCRIPTOR_HANDLE top_level_structures_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
-	top_level_structures_handle.ptr += (50 - 1) * shader_bindable_size;
+	top_level_structures_handle.ptr += top_level_structure.structured_buffer.descriptor_heap_offset * shader_bindable_size;
 	auto root_arg_1 = top_level_structures_handle;
 	// 
 	//auto root_arg_1 = dx12core::GetDx12Core().GetRayObjectManager()->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();

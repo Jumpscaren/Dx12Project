@@ -432,7 +432,7 @@ dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource,
 		//unorded_access_view_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 		//dx12core::GetDx12Core().GetDevice()->CreateUnorderedAccessView(resource, nullptr, &unorded_access_view_desc, heap_handle);
 
-		structured_buffer.descriptor_heap_offset = m_acceleration_counter;
+		structured_buffer.descriptor_heap_offset = m_max_dh_shader_bindable_offset - m_acceleration_counter - 1;
 		structured_buffer.resource_index = -1;
 		structured_buffer.texture_type = TextureType::TEXTURE_CBV;
 

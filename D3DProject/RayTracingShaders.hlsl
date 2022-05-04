@@ -28,9 +28,11 @@ void RayGenerationShader()
 	ray.TMin = 0.0f;
 	ray.TMax = 1000.0f;
 
-	RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
+	RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f), 0 };
 
 	TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
+
+	//TraceRay(scene, );
 
 	if(all(outputTexture[currentPixel].xyz == CLEAR_COLOUR) || all(payload.colour == HIT_COLOUR))
 		outputTexture[currentPixel] = float4(payload.colour, 1.0f);
@@ -47,5 +49,21 @@ void MissShader(inout RayPayloadData data)
 [shader("closesthit")]
 void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionAttributes attribs)
 {
-	data.colour = float3(0.0f, 0.0f, 1.0f);
+	if (data.max_count > 2)
+		return;
+
+	float3 t = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+
+	RayDesc ray;
+	ray.Origin = t;
+	ray.Direction = float3(0.0f, 0.0f, 1.0f);
+	ray.TMin = 0.0f;
+	ray.TMax = 1000.0f;
+
+	//RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
+	data.max_count += 1;
+
+	//TraceRay(scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, ray, data);
+
+	data.colour = t;//float3(0.0f, 0.0f, 1.0f);
 }

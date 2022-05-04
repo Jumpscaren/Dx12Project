@@ -51,6 +51,15 @@ int main()
 	BufferResource vertex_2 = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle_2, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
 	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(SimpleVertex), 6, TextureType::TEXTURE_SRV);
 
+	DirectX::XMFLOAT3X4 transform;
+	DirectX::XMStoreFloat3x4(&transform, DirectX::XMMatrixTranslation(0,0,0));
+	DirectX::XMFLOAT3X4 transform_2;
+	DirectX::XMMATRIX transform_matrix_2 = DirectX::XMMatrixTranslation(0, 0.5f, 0) * DirectX::XMMatrixRotationZ(10);
+	DirectX::XMStoreFloat3x4(&transform_2, transform_matrix_2);
+
+	BufferResource vertex_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform), sizeof(DirectX::XMFLOAT3X4), 1);
+	BufferResource vertex_2_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform_2), sizeof(DirectX::XMFLOAT3X4), 1);
+
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
 
@@ -71,18 +80,22 @@ int main()
 
 	dx12core::GetDx12Core().CreateRaytracingStructure(&vertex);
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex);
+	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh, vertex_transform);
+	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh, vertex_2_transform);
+	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex, vertex_transform);
+	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2, vertex_2_transform);
 	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
-	RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
+	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
+	//RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
 
 	dx12renderpipeline* raytracing_render_pipeline = new dx12renderpipeline();
-	raytracing_render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);//, D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
+	//raytracing_render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);//, D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
+	raytracing_render_pipeline->AddShaderResource(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false, D3D12_ROOT_PARAMETER_TYPE_SRV);
 	raytracing_render_pipeline->AddUnorderedAccess(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), 0);
-	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader");
+	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", &vertex1_ray_tracing_object);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
@@ -102,7 +115,7 @@ int main()
 		dx12core::GetDx12Core().Draw();
 
 		rotation += 0.05f;
-		dx12core::GetDx12Core().SetTopLevelTransform(rotation);
+		dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
 
 		//Raytracing
 		dx12core::GetDx12Core().SetRenderPipeline(raytracing_render_pipeline);

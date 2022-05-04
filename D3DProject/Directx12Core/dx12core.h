@@ -79,5 +79,5 @@ public:
 	TextureResource GetOutputUAV();
 	void PreDispatchRays();
 	void DispatchRays();
-	void SetTopLevelTransform(float rotation);
+	void SetTopLevelTransform(float rotation, const RayTracingObject& acceleration_structure_object);
 };

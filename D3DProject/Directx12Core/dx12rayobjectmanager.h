@@ -2,6 +2,7 @@
 #include "dx12buffermanager.h"
 #include <vector>
 #include <map>
+#include <DirectXMath.h>
 
 struct RayTracingObject
 {
@@ -23,12 +24,17 @@ private:
 		BufferResource scratch_buffer;
 		BufferResource instance_buffer;
 	};
+	struct AddedMesh
+	{
+		BufferResource mesh;
+		BufferResource transform;
+	};
 private:
 	std::vector<BottomLevelAccelerationStructures> m_bottom_level_acceleration_structures;
 	std::vector<TopLevelAccelerationStructures> m_top_level_acceleration_structures;
 	std::map<UINT64, RayTracingObject> m_existing_objects;
 
-	std::vector<BufferResource> m_meshes;
+	std::vector<AddedMesh> m_meshes;
 
 private:
 	UINT BuildBottomLevelAccelerationStructure(BufferResource* vertex_buffer);
@@ -38,11 +44,11 @@ private:
 public:
 	dx12rayobjectmanager();
 	~dx12rayobjectmanager();
-	void AddMesh(BufferResource mesh_buffer);
+	void AddMesh(BufferResource mesh_buffer, BufferResource transform);
 	RayTracingObject CreateRayTracingObject();
-	ID3D12Resource* GetTopLevelResultAccelerationStructureBuffer();
-	ID3D12Resource* GetTopLevelScratchAccelerationStructureBuffer();
-	ID3D12Resource* GetTopLevelInstanceBuffer();
-	ID3D12Resource* GetBottomLevelScratchAccelerationStructureBuffer();
+	const BufferResource& GetTopLevelResultAccelerationStructureBuffer(const RayTracingObject& ray_object);
+	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
+	const BufferResource& GetTopLevelInstanceBuffer(const RayTracingObject& ray_object);
+	const BufferResource& GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
 };
 

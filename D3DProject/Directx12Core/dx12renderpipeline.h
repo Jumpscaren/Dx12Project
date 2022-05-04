@@ -7,6 +7,8 @@
 #include <string>
 #include "dx12buffermanager.h"
 
+struct RayTracingObject;
+
 enum class BindingType
 {
 	CONSTANT_BUFFER = 1,
@@ -124,7 +126,7 @@ private:
 
 private:
 	ID3DBlob* LoadCSO(const std::string& filepath);
-	void AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE range_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
+	void AddDescriptorTable(D3D12_DESCRIPTOR_RANGE_TYPE range_type, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT descriptors = 1, UINT register_space = 0);
 	void CreateRootSignature(ID3D12RootSignature** root_signature, const D3D12_ROOT_SIGNATURE_FLAGS& flags = D3D12_ROOT_SIGNATURE_FLAG_NONE);
 
 public:
@@ -132,7 +134,7 @@ public:
 	~dx12renderpipeline();
 	void AddConstantBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, D3D12_ROOT_PARAMETER_TYPE parameter_type = D3D12_ROOT_PARAMETER_TYPE_CBV, UINT register_space = 0);
 	void AddStructuredBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, D3D12_DESCRIPTOR_RANGE_TYPE range_type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT register_space = 0);
-	void AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
+	void AddShaderResource(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT descriptors = 1, UINT register_space = 0);
 	void AddUnorderedAccess(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void AddStaticSampler(D3D12_FILTER sampler_filter, D3D12_TEXTURE_ADDRESS_MODE sampler_address_mode, UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, UINT register_space = 0);
 	void CreateRenderPipeline(const std::string& vertex_shader, const std::string& pixel_shader);
@@ -161,7 +163,7 @@ private:
 	}
 public:
 	void CreateRayTracingStateObject(const std::string& shader_name, const std::wstring& hit_shader_name, UINT payload_size, UINT max_bounces);
-	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name);
+	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, RayTracingObject* ray_tracing_object);
 	void CheckIfRaytracingRenderPipeline();
 	ID3D12StateObject* GetRaytracingStateObject();
 	ID3D12RootSignature* GetRaytracingRootSignature();

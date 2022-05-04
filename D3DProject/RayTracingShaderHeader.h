@@ -9,4 +9,5 @@ typedef DirectX::XMFLOAT3 float3;
 struct RayPayloadData
 {
 	float3 colour;
+	int max_count;
 };
