@@ -84,7 +84,7 @@ int main()
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh, vertex_2_transform);
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex, vertex_transform);
 	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2, vertex_2_transform);
-	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
+	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(false);
 
 	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
 	//RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
@@ -115,7 +115,7 @@ int main()
 		dx12core::GetDx12Core().Draw();
 
 		rotation += 0.05f;
-		dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
+		//dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
 
 		//Raytracing
 		dx12core::GetDx12Core().SetRenderPipeline(raytracing_render_pipeline);

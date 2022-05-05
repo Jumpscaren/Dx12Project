@@ -19,9 +19,11 @@ private:
 	};
 	struct TopLevelAccelerationStructures
 	{
-		UINT bottom_level_index;
+		//UINT bottom_level_index;
+		std::vector<UINT> bottom_level_indices;
 		BufferResource result_buffer;
 		BufferResource scratch_buffer;
+		std::vector<BufferResource> instance_buffers;
 		BufferResource instance_buffer;
 	};
 	struct AddedMesh
@@ -38,14 +40,14 @@ private:
 
 private:
 	UINT BuildBottomLevelAccelerationStructure(BufferResource* vertex_buffer);
-	UINT BuildTopLevelAccelerationStructure(UINT bottom_level_index);
+	UINT BuildTopLevelAccelerationStructure(const std::vector<UINT>& bottom_level_indices);
 
-	UINT BuildBottomLevelAcceleratonStructure();
+	UINT BuildBottomLevelAcceleratonStructure(UINT meshes_count, UINT mesh_index);
 public:
 	dx12rayobjectmanager();
 	~dx12rayobjectmanager();
 	void AddMesh(BufferResource mesh_buffer, BufferResource transform);
-	RayTracingObject CreateRayTracingObject();
+	RayTracingObject CreateRayTracingObject(bool one_bottom_acceleration_structure);
 	const BufferResource& GetTopLevelResultAccelerationStructureBuffer(const RayTracingObject& ray_object);
 	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
 	const BufferResource& GetTopLevelInstanceBuffer(const RayTracingObject& ray_object);
