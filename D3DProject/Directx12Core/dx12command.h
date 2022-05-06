@@ -27,7 +27,7 @@ public:
 	void Signal();
 	void Wait();
 	void SignalAndWait();
-	void SetDescriptorHeap(ID3D12DescriptorHeap* descriptor_heap);
+	void SetDescriptorHeap(ID3D12DescriptorHeap* descriptor_heap);;
 	void SetRootSignature(ID3D12RootSignature* root_signature);
 	void SetComputeRootSignature(ID3D12RootSignature* root_signature);
 	void SetPipelineState(ID3D12PipelineState* pipeline_state);
@@ -41,6 +41,7 @@ public:
 	void Reset();
 	void SetShaderResourceView(RootRenderBinding* binding, ID3D12Resource* resource);
 	void SetDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource);
+	void SetComputeDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource);
 	void Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object);
 	void DispatchRays(D3D12_DISPATCH_RAYS_DESC* description);
 	void BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* desc);

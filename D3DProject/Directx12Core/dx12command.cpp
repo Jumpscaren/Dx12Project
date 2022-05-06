@@ -189,7 +189,7 @@ void dx12command::SetDescriptorTable(RootRenderBinding* binding, ID3D12Descripto
 	//resource.;
 	UINT size = 0;
 
-	if (binding->binding_type == BindingType::SHADER_RESOURCE || binding->binding_type == BindingType::STRUCTURED_BUFFER)
+	if (binding->binding_type == BindingType::SHADER_RESOURCE || binding->binding_type == BindingType::STRUCTURED_BUFFER || binding->binding_type == BindingType::UNORDERED_ACCESS)
 		size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	//Get the descriptor handle and the offset to move the pointer to the correct resource
@@ -197,6 +197,20 @@ void dx12command::SetDescriptorTable(RootRenderBinding* binding, ID3D12Descripto
 	gpu_handle.ptr += size * resource.descriptor_heap_offset; 
 
 	m_command_list->SetGraphicsRootDescriptorTable(binding->root_parameter_index, gpu_handle);
+}
+
+void dx12command::SetComputeDescriptorTable(RootRenderBinding* binding, ID3D12DescriptorHeap* descriptor_heap, dx12texture& resource)
+{
+	UINT size = 0;
+
+	if (binding->binding_type == BindingType::SHADER_RESOURCE || binding->binding_type == BindingType::STRUCTURED_BUFFER || binding->binding_type == BindingType::UNORDERED_ACCESS)
+		size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	//Get the descriptor handle and the offset to move the pointer to the correct resource
+	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = descriptor_heap->GetGPUDescriptorHandleForHeapStart();
+	gpu_handle.ptr += size * resource.descriptor_heap_offset;
+
+	m_command_list->SetComputeRootDescriptorTable(binding->root_parameter_index, gpu_handle);
 }
 
 void dx12command::Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object)

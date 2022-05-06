@@ -42,6 +42,9 @@
     <ClCompile Include="Directx12Core\dx12rayobjectmanager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Directx12Core\dx12raytracingrenderpipeline.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Window.h">
@@ -72,6 +75,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Directx12Core\dx12rayobjectmanager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Directx12Core\dx12raytracingrenderpipeline.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

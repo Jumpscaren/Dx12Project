@@ -9,6 +9,7 @@
 #include "dx12renderpipeline.h"
 #include "dx12buffermanager.h"
 #include "dx12rayobjectmanager.h"
+#include "dx12raytracingrenderpipeline.h"
 
 class dx12core
 {
@@ -35,6 +36,7 @@ private:
 	TextureResource m_depth_stencil;
 
 	dx12renderpipeline* m_render_pipeline;
+	dx12raytracingrenderpipeline* m_ray_tracing_render_pipeline;
 
 	dx12buffermanager* m_buffer_manager;
 
@@ -68,6 +70,7 @@ public:
 	ID3D12CommandQueue* GetCommandQueue();
 	dx12rayobjectmanager* GetRayObjectManager();
 	void SetRenderPipeline(dx12renderpipeline* render_pipeline);
+	void SetRayTracingRenderPipeline(dx12raytracingrenderpipeline* render_pipeline);
 	void Show();
 	void PreDraw();
 	void Draw();

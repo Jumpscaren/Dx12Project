@@ -6,7 +6,8 @@
 
 struct RayTracingObject
 {
-	UINT object;
+	UINT bottom_level_index;
+	UINT instance_index;
 };
 
 class dx12rayobjectmanager
@@ -19,11 +20,9 @@ private:
 	};
 	struct TopLevelAccelerationStructures
 	{
-		//UINT bottom_level_index;
 		std::vector<UINT> bottom_level_indices;
 		BufferResource result_buffer;
 		BufferResource scratch_buffer;
-		std::vector<BufferResource> instance_buffers;
 		BufferResource instance_buffer;
 	};
 	struct AddedMesh
@@ -34,23 +33,24 @@ private:
 private:
 	std::vector<BottomLevelAccelerationStructures> m_bottom_level_acceleration_structures;
 	std::vector<TopLevelAccelerationStructures> m_top_level_acceleration_structures;
-	std::map<UINT64, RayTracingObject> m_existing_objects;
 
 	std::vector<AddedMesh> m_meshes;
 
 private:
-	UINT BuildBottomLevelAccelerationStructure(BufferResource* vertex_buffer);
-	UINT BuildTopLevelAccelerationStructure(const std::vector<UINT>& bottom_level_indices);
+	UINT BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects);
+	void UpdateTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects, UINT scene_index);
 
-	UINT BuildBottomLevelAcceleratonStructure(UINT meshes_count, UINT mesh_index);
+	UINT BuildBottomLevelAcceleratonStructure();
 public:
 	dx12rayobjectmanager();
 	~dx12rayobjectmanager();
-	void AddMesh(BufferResource mesh_buffer, BufferResource transform);
-	RayTracingObject CreateRayTracingObject(bool one_bottom_acceleration_structure);
-	const BufferResource& GetTopLevelResultAccelerationStructureBuffer(const RayTracingObject& ray_object);
-	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
-	const BufferResource& GetTopLevelInstanceBuffer(const RayTracingObject& ray_object);
+	void AddMesh(BufferResource mesh_buffer, BufferResource transform = {});
+	RayTracingObject CreateRayTracingObject();
+	void CreateScene(const std::vector<RayTracingObject>& objects);
+	void UpdateScene(const std::vector<RayTracingObject>& objects);
+	const BufferResource& GetTopLevelResultAccelerationStructureBuffer();
+	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer();
+	const BufferResource& GetTopLevelInstanceBuffer();
 	const BufferResource& GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
 };
 

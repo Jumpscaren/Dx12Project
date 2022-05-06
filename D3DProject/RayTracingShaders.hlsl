@@ -12,6 +12,11 @@ static const float3 CLEAR_COLOUR = float3(0.0f, 0.0f, 0.0f);
 //	float3 colour;
 //};
 
+cbuffer TriangleColour : register(b0)
+{
+	float3 triangle_colour;
+}
+
 [shader("raygeneration")]
 void RayGenerationShader()
 {
@@ -71,8 +76,12 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 
 	if (index == 0)
 		data.colour = float3(1.0f, 0.0f, 0.0f);
-	else
+	else if (index == 1)
 		data.colour = float3(0.0f, 0.0f, 1.0f);
+	else 
+		data.colour = float3(0.0f, 1.0f, 0.0f);
+
+	//data.colour = triangle_colour;
 
 	//TraceRay(scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, ray, data);
 

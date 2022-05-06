@@ -284,57 +284,19 @@ TextureResource dx12core::GetOutputUAV()
 
 void dx12core::PreDispatchRays()
 {
-	m_render_pipeline->CheckIfRaytracingRenderPipeline();
+	//m_render_pipeline->CheckIfRaytracingRenderPipeline();
+	assert(m_ray_tracing_render_pipeline != nullptr);
 
 	ID3D12Resource* writable_resource = m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
 	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	//DirectX::XMFLOAT3X4 rotation_data;
-	//DirectX::XMStoreFloat3x4(&rotation_data, DirectX::XMMatrixRotationY(0));
-
-	//D3D12_RAYTRACING_INSTANCE_DESC instancing_desc;
-	//memcpy(instancing_desc.Transform, &rotation_data, sizeof(instancing_desc.Transform));
-	//instancing_desc.InstanceID = 0;
-	//instancing_desc.InstanceMask = 0xFF;
-	//instancing_desc.InstanceContributionToHitGroupIndex = 0;
-	//instancing_desc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-	//instancing_desc.AccelerationStructure =
-	//	m_bottom_level_result_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();
-
-	//D3D12_RANGE nothing = { 0, 0 };
-	//unsigned char* mapped_ptr = nullptr;
-	//HRESULT hr = m_top_level_instance_buffer.buffer->Map(0, &nothing, reinterpret_cast<void**>(&mapped_ptr)); 
-
-	//assert (SUCCEEDED(hr));
-
-	//memcpy(mapped_ptr, &instancing_desc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
-	//m_top_level_instance_buffer.buffer->Unmap(0, nullptr);
-
-	//D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS top_level_inputs;
-	//top_level_inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	//top_level_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-	//top_level_inputs.NumDescs = 1;
-	//top_level_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	//top_level_inputs.InstanceDescs = m_top_level_instance_buffer.buffer->GetGPUVirtualAddress();
-
-	//D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC acceleration_structure_desc;
-	//acceleration_structure_desc.DestAccelerationStructureData = m_top_level_result_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();
-
-	//acceleration_structure_desc.Inputs = top_level_inputs;
-	//acceleration_structure_desc.SourceAccelerationStructureData = NULL;
-	//acceleration_structure_desc.ScratchAccelerationStructureData = m_top_level_scratch_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();
-
-	//m_direct_command->BuildRaytracingAccelerationStructure(&acceleration_structure_desc);
-
-	//m_direct_command->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, m_top_level_result_acceleration_structure_buffer.buffer.Get());
 }
 
 void dx12core::DispatchRays()
 {
 	D3D12_DISPATCH_RAYS_DESC desc;
-	desc.RayGenerationShaderRecord = m_render_pipeline->RayGenerationShaderRecord()->GetGpuAdressRange();//rayGenRecord.GetGpuAdressRange();
-	desc.MissShaderTable = m_render_pipeline->GetMissShaderRecord()->GetGpuAdressRangeAndStride();//missTable.GetGpuAdressRangeAndStride();
-	desc.HitGroupTable = m_render_pipeline->GetHitShaderRecord()->GetGpuAdressRangeAndStride();
+	desc.RayGenerationShaderRecord = m_ray_tracing_render_pipeline->RayGenerationShaderRecord()->GetGpuAdressRange();//rayGenRecord.GetGpuAdressRange();
+	desc.MissShaderTable = m_ray_tracing_render_pipeline->GetMissShaderRecord()->GetGpuAdressRangeAndStride();//missTable.GetGpuAdressRangeAndStride();
+	desc.HitGroupTable = m_ray_tracing_render_pipeline->GetHitShaderRecord()->GetGpuAdressRangeAndStride();
 	desc.CallableShaderTable.StartAddress = 0;
 	desc.CallableShaderTable.SizeInBytes = 0;
 	desc.CallableShaderTable.StrideInBytes = 0;
@@ -343,8 +305,34 @@ void dx12core::DispatchRays()
 	desc.Depth = 1;
 
 	m_direct_command->SetDescriptorHeap(m_texture_manager->GetShaderBindableDescriptorHeap());
-	m_direct_command->SetStateObject(m_render_pipeline->GetRaytracingStateObject());
-	m_direct_command->SetRootSignature(m_render_pipeline->GetRaytracingRootSignature());
+
+	m_direct_command->SetComputeRootSignature(m_ray_tracing_render_pipeline->GetRaytracingGlobalRootSignature());
+	//m_direct_command->SetRootSignature(m_ray_tracing_render_pipeline->GetRaytracingLocalRootSignature());
+
+	m_direct_command->SetStateObject(m_ray_tracing_render_pipeline->GetRaytracingStateObject());
+
+	RootRenderBinding temp; 
+	temp.binding_slot = 0;
+	temp.binding_type = BindingType::SHADER_RESOURCE;
+	temp.register_space = 0;
+	temp.shader_type = D3D12_SHADER_VISIBILITY_ALL;
+	temp.root_parameter_index = 0;
+
+	dx12texture temp_texture = m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().structured_buffer;
+
+	//m_direct_command->SetComputeDescriptorTable(&temp, m_texture_manager->GetShaderBindableDescriptorHeap(), temp_texture);
+
+	RootRenderBinding temp_output;
+	temp.binding_slot = 0;
+	temp.binding_type = BindingType::UNORDERED_ACCESS;
+	temp.register_space = 0;
+	temp.shader_type = D3D12_SHADER_VISIBILITY_ALL;
+	temp.root_parameter_index = 1;
+
+	//m_direct_command->SetComputeDescriptorTable(&temp, m_texture_manager->GetShaderBindableDescriptorHeap(), m_output_uav.unordered_access_view);
+
+	//m_direct_command->ResourceBarrier();
+
 	m_direct_command->DispatchRays(&desc);
 }
 
@@ -364,13 +352,13 @@ void dx12core::SetTopLevelTransform(float rotation, const RayTracingObject& acce
 
 	D3D12_RANGE nothing = { 0, 0 };
 	unsigned char* mappedPtr = nullptr;
-	HRESULT hr = m_ray_object_manager->GetTopLevelInstanceBuffer(acceleration_structure_object).buffer->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));
+	HRESULT hr = m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));
 		//m_ray_object_manager->GetTopLevelInstanceBuffer()->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));//topLevelInstanceBuffer->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));
 
 	assert(SUCCEEDED(hr));
 
 	memcpy(mappedPtr, &instancingDesc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
-	m_ray_object_manager->GetTopLevelInstanceBuffer(acceleration_structure_object).buffer->Unmap(0, nullptr);
+	m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->Unmap(0, nullptr);
 	//m_ray_object_manager->GetTopLevelInstanceBuffer()->Unmap(0, nullptr);
 	//topLevelInstanceBuffer->Unmap(0, nullptr);
 
@@ -379,22 +367,22 @@ void dx12core::SetTopLevelTransform(float rotation, const RayTracingObject& acce
 	topLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
 	topLevelInputs.NumDescs = 1;
 	topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	topLevelInputs.InstanceDescs = m_ray_object_manager->GetTopLevelInstanceBuffer(acceleration_structure_object).buffer->GetGPUVirtualAddress();
+	topLevelInputs.InstanceDescs = m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->GetGPUVirtualAddress();
 		//m_ray_object_manager->GetTopLevelInstanceBuffer()->GetGPUVirtualAddress();//topLevelInstanceBuffer->GetGPUVirtualAddress();
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accelerationStructureDesc;
-	accelerationStructureDesc.DestAccelerationStructureData = m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer(acceleration_structure_object).buffer->GetGPUVirtualAddress();
+	accelerationStructureDesc.DestAccelerationStructureData = m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().buffer->GetGPUVirtualAddress();
 		//m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
 		//topLevelResultAccelerationStructureBuffer->GetGPUVirtualAddress();
 	accelerationStructureDesc.Inputs = topLevelInputs;
 	accelerationStructureDesc.SourceAccelerationStructureData = NULL;
-	accelerationStructureDesc.ScratchAccelerationStructureData = m_ray_object_manager->GetTopLevelScratchAccelerationStructureBuffer(acceleration_structure_object).buffer->GetGPUVirtualAddress();
+	accelerationStructureDesc.ScratchAccelerationStructureData = m_ray_object_manager->GetTopLevelScratchAccelerationStructureBuffer().buffer->GetGPUVirtualAddress();
 		//m_ray_object_manager->GetTopLevelScratchAccelerationStructureBuffer()->GetGPUVirtualAddress();//m_top_level_scratch_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();
 		//topLevelScratchAccelerationStructureBuffer->GetGPUVirtualAddress();
 
 	m_direct_command->BuildRaytracingAccelerationStructure(&accelerationStructureDesc);//&accelerationStructureDesc, 0, nullptr);
 
-	m_direct_command->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer(acceleration_structure_object).buffer.Get());
+	m_direct_command->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().buffer.Get());
 		//m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer());
 	//D3D12_RESOURCE_BARRIER uavBarrier = {};
 	//uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -485,6 +473,11 @@ dx12rayobjectmanager* dx12core::GetRayObjectManager()
 void dx12core::SetRenderPipeline(dx12renderpipeline* render_pipeline)
 {
 	m_render_pipeline = render_pipeline;
+}
+
+void dx12core::SetRayTracingRenderPipeline(dx12raytracingrenderpipeline* render_pipeline)
+{
+	m_ray_tracing_render_pipeline = render_pipeline;
 }
 
 void dx12core::Show()
