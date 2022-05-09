@@ -12,10 +12,12 @@ static const float3 CLEAR_COLOUR = float3(0.0f, 0.0f, 0.0f);
 //	float3 colour;
 //};
 
-cbuffer TriangleColour : register(b0)
+struct TriangleColour
 {
-	float3 triangle_colour;
-}
+	float3 colour;
+};
+
+StructuredBuffer<TriangleColour> colours : register(t1);
 
 [shader("raygeneration")]
 void RayGenerationShader()
@@ -65,25 +67,39 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 
 	RayDesc ray;
 	ray.Origin = t;
-	ray.Direction = float3(0.0f, 0.0f, 1.0f);
+	ray.Direction = float3(0.0f, 0.0f, -1.0f);
 	ray.TMin = 0.0f;
 	ray.TMax = 1000.0f;
+
+	TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
 
 	//RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
 	data.max_count += 1;
 
-	int index = InstanceID();//InstanceIndex();//PrimitiveIndex();
+	int index = InstanceID();
+	//int index = InstanceIndex();
+	//int index = PrimitiveIndex();
 
-	if (index == 0)
-		data.colour = float3(1.0f, 0.0f, 0.0f);
-	else if (index == 1)
-		data.colour = float3(0.0f, 0.0f, 1.0f);
-	else 
-		data.colour = float3(0.0f, 1.0f, 0.0f);
+	data.colour = colours[index].colour;
+
+
+
+	//if (index == 0)
+	//	data.colour = float3(1.0f, 0.0f, 0.0f);
+	//else if (index == 1)
+	//	data.colour = float3(0.0f, 0.0f, 1.0f);
+	//else 
+	//	data.colour = float3(0.0f, 1.0f, 0.0f);
 
 	//data.colour = triangle_colour;
 
 	//TraceRay(scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xFF, 0, 0, 0, ray, data);
 
 	//data.colour = float3(index, index, index);//float3(0.0f, 0.0f, 1.0f);
+}
+
+[shader("closesthit")]
+void ReflectionClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionAttributes attribs)
+{
+	data.colour = float3(1.0f, 1.0f, 1.0f);
 }

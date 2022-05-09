@@ -112,7 +112,7 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<
 			instancingDesc.Transform[2][2] = 1;
 		instancingDesc.InstanceID = i;
 		instancingDesc.InstanceMask = 0xFF;
-		instancingDesc.InstanceContributionToHitGroupIndex = 0;
+		instancingDesc.InstanceContributionToHitGroupIndex = i % 2;
 		instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 		instancingDesc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
 
