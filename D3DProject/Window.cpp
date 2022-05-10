@@ -72,3 +72,13 @@ HWND Window::GetWindowHandle() const
 {
     return m_window_handle;
 }
+
+float Window::GetWindowHeight() const
+{
+    return m_window_height;
+}
+
+float Window::GetWindowWidth() const
+{
+    return m_window_width;
+}

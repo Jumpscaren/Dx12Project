@@ -19,27 +19,54 @@ struct TriangleColour
 
 StructuredBuffer<TriangleColour> colours : register(t1);
 
+cbuffer ViewProjectionMatrix : register(b0)
+{
+	float4x4 view_projection_matrix;
+	float3 camera_position;
+}
+
 [shader("raygeneration")]
 void RayGenerationShader()
 {
 
 	uint3 dispatchDim = DispatchRaysDimensions();
 	uint2 currentPixel = DispatchRaysIndex().xy;
-	float3 origin = float3(-1 + (2.0f * currentPixel.x) / dispatchDim.x,
-		1 - (2.0f * currentPixel.y) / dispatchDim.y, -1.0f);
-	float2 d = (((currentPixel.xy + 0.5f) / dispatchDim.xy) * 2.f - 1.f);
+	//float3 origin = float3(-1 + (2.0f * currentPixel.x) / dispatchDim.x,
+	//	1 - (2.0f * currentPixel.y) / dispatchDim.y, -1.0f);
+	//float2 d = (((currentPixel.xy + 0.5f) / dispatchDim.xy) * 2.f - 1.f);
+
+	//float3 camera_position = float3(0,0,-10.0f);
+
+	//float direction = normalize(origin - camera_position);
+
+	//float3 origin = float3(currentPixel.x, 1 - currentPixel.y, 0.0f);
+
+	float2 d = currentPixel.xy + 0.5;
+
+	// Screen position for the ray
+	float2 screenPos = d / dispatchDim.xy * 2.0 - 1.0;
+
+	// Invert Y for DirectX-style coordinates
+	screenPos.y = -screenPos.y;
+
+	float3 origin = float3(screenPos, 0.0f);
+
+	float4 world = mul(float4(origin, 1), view_projection_matrix);
+	world.xyz /= world.w;
+
+	origin = camera_position;
+
+	float3 direction = normalize(world.xyz - camera_position);
 
 	RayDesc ray;
 	ray.Origin = origin;
-	ray.Direction = float3(0.0f, 0.0f, 1.0f);
+	ray.Direction = direction;//float3(0.0f, 0.0f, 1.0f);
 	ray.TMin = 0.0f;
 	ray.TMax = 1000.0f;
 
-	RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f), 0 };
+	RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f), 0};
 
 	TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, payload);
-
-	//TraceRay(scene, );
 
 	//if(all(outputTexture[currentPixel].xyz == CLEAR_COLOUR) || all(payload.colour == HIT_COLOUR))
 	//	outputTexture[currentPixel] = float4(payload.colour, 1.0f);
@@ -71,7 +98,7 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 	ray.TMin = 0.0f;
 	ray.TMax = 1000.0f;
 
-	TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
+	//TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
 
 	//RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
 	data.max_count += 1;
@@ -82,7 +109,7 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 
 	data.colour = colours[index].colour;
 
-
+	data.colour *= float3(attribs.barycentrics.xy, 1.0f);
 
 	//if (index == 0)
 	//	data.colour = float3(1.0f, 0.0f, 0.0f);

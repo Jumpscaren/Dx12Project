@@ -162,7 +162,7 @@ public:
 	dx12raytracingrenderpipeline();
 	~dx12raytracingrenderpipeline();
 	void CreateRayTracingStateObject(const std::string& shader_name, const std::wstring& hit_shader_name, UINT payload_size, UINT max_bounces);
-	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours);
+	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours, BufferResource view_projection_matrix);
 	void CheckIfRaytracingRenderPipeline();
 	ID3D12StateObject* GetRaytracingStateObject();
 	ID3D12RootSignature* GetRaytracingLocalRootSignature();

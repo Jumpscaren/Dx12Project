@@ -39,6 +39,9 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
 	//}
 	//UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
 
+	if (m_meshes.size() == 0)
+		assert(false);
+
 	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(instance_transform, hit_shader_index);
 
 	//UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_indices);

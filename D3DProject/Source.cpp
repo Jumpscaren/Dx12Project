@@ -46,10 +46,61 @@ int main()
 		{{0.75f, 0.75f, 0.5f}, {1.0f, 0.0f}},
 		{{0.75f, -0.75f, 0.5f}, {1.0f, 1.0f}},
 	};
+	SimpleVertex cube[36] =
+	{
+		{{-1.0f,-1.0f,-1.0f}, {0,0}}, // triangle 1 : begin
+		{{-1.0f,-1.0f, 1.0f}, {0,0}},
+		{{-1.0f, 1.0f, 1.0f}, {0,0}},
+
+		{{1.0f, 1.0f,-1.0f}, {0,0}},
+		{{-1.0f,-1.0f,-1.0f}, {0,0}},
+		{{-1.0f, 1.0f,-1.0f}, {0,0}},
+
+		{{1.0f,-1.0f, 1.0f}, {0,0}},
+		{{-1.0f,-1.0f,-1.0f}, {0,0}},
+		{{1.0f,-1.0f,-1.0f,}, {0,0}},
+
+		{{1.0f, 1.0f,-1.0f}, {0,0}}, //f
+		{{1.0f,-1.0f,-1.0f}, {0,0}}, //f
+		{{-1.0f,-1.0f,-1.0f}, {0,0}}, //f
+
+		{{-1.0f,-1.0f,-1.0f}, {0,0}}, //f
+		{{-1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{-1.0f, 1.0f,-1.0f}, {0,0}}, //f
+
+		{{1.0f,-1.0f, 1.0f}, {0,0}}, //f
+		{{-1.0f,-1.0f, 1.0f}, {0,0}}, //f
+		{{-1.0f,-1.0f,-1.0f}, {0,0}}, //f
+
+		{{-1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{-1.0f,-1.0f, 1.0f}, {0,0}},//f
+		{{1.0f,-1.0f, 1.0f}, {0,0}},//f
+
+		{{1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{1.0f,-1.0f,-1.0f}, {0,0}}, //f
+		{{1.0f, 1.0f,-1.0f}, {0,0}}, //f
+
+		{{1.0f,-1.0f,-1.0f}, {0,0}}, //f
+		{{1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{1.0f,-1.0f, 1.0f}, {0,0}}, //f
+
+		{{1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{1.0f, 1.0f,-1.0f}, {0,0}}, //f
+		{{-1.0f, 1.0f,-1.0f}, {0,0}}, //f
+
+		{{1.0f, 1.0f, 1.0f}, {0,0}}, //f
+		{{-1.0f, 1.0f,-1.0f}, {0,0}}, //f
+		{{-1.0f, 1.0f, 1.0f}, {0,0}}, //f
+
+		{{1.0f, 1.0f, 1.0f}, {0,0}},
+		{{-1.0f, 1.0f, 1.0f}, {0,0}},
+		{{1.0f,-1.0f, 1.0f}, {0,0}}
+	};
 
 	BufferResource vertex = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
 	BufferResource vertex_2 = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle_2, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
 	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(SimpleVertex), 6, TextureType::TEXTURE_SRV);
+	BufferResource cube_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(cube, sizeof(SimpleVertex), 36, TextureType::TEXTURE_SRV);
 
 	float colours[24] = {1.0f, 0.0f, 0.0f,
 						0.0f, 0.0f, 1.0f,
@@ -63,6 +114,25 @@ int main()
 
 	BufferResource triangle_colours = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(&colours, 3 * sizeof(float), 8, TextureType::TEXTURE_SRV);
 
+	float camera_position[3] = { 0.0f, 0.0f, -3.0f };
+
+	DirectX::XMMATRIX camera_to_world = DirectX::XMMatrixLookAtLH({camera_position[0], camera_position[1], camera_position[2], 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f});
+	float fov = DirectX::XM_PIDIV2;
+	DirectX::XMMATRIX projection_matrix = DirectX::XMMatrixPerspectiveFovLH(fov, window.GetWindowWidth() / window.GetWindowHeight(), 1.0f, 1000.0f);
+	camera_to_world *= projection_matrix;
+	camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
+
+	struct ViewProjectionMatrix
+	{
+		DirectX::XMMATRIX view_projection;
+		float camera_position[3];
+	};
+	ViewProjectionMatrix camera_data;
+	camera_data.view_projection = camera_to_world;
+	camera_data.camera_position[0] = camera_position[0]; camera_data.camera_position[1] = camera_position[1]; camera_data.camera_position[2] = camera_position[2];
+
+	BufferResource view_projection_matrix = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&camera_data), sizeof(ViewProjectionMatrix), 1);
+
 	DirectX::XMFLOAT3X4 transform;
 	DirectX::XMStoreFloat3x4(&transform, DirectX::XMMatrixTranslation(0,0,0));
 	DirectX::XMFLOAT3X4 transform_2;
@@ -71,30 +141,6 @@ int main()
 
 	BufferResource vertex_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform), sizeof(DirectX::XMFLOAT3X4), 1);
 	BufferResource vertex_2_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform_2), sizeof(DirectX::XMFLOAT3X4), 1);
-
-	DirectX::XMFLOAT3X4 quad_1_matrix;
-	DirectX::XMFLOAT3X4 quad_2_matrix;
-	DirectX::XMFLOAT3X4 quad_3_matrix;
-	DirectX::XMFLOAT3X4 quad_4_matrix;
-	DirectX::XMFLOAT3X4 quad_5_matrix;
-	DirectX::XMFLOAT3X4 quad_6_matrix;
-
-	//SUSSSY BAKA NÄR JAG ROTERAR RUNT X ELLER Y
-	DirectX::XMStoreFloat3x4(&quad_1_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0.5f)* DirectX::XMMatrixRotationRollPitchYaw(0, 0, 1));
-	DirectX::XMStoreFloat3x4(&quad_2_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0)* DirectX::XMMatrixRotationZ(10));
-	DirectX::XMStoreFloat3x4(&quad_3_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0)* DirectX::XMMatrixRotationZ(10));
-	DirectX::XMStoreFloat3x4(&quad_4_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0)* DirectX::XMMatrixRotationZ(10));
-	DirectX::XMStoreFloat3x4(&quad_5_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0)* DirectX::XMMatrixRotationZ(10));
-	DirectX::XMStoreFloat3x4(&quad_6_matrix, DirectX::XMMatrixTranslation(0, 0.5f, 0)* DirectX::XMMatrixRotationZ(10));
-
-	//quad_1_matrix.m[2][3] = 0.0f;
-
-	BufferResource quad_1_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_1_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource quad_2_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_2_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource quad_3_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_3_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource quad_4_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_4_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource quad_5_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_5_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource quad_6_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&quad_6_matrix), sizeof(DirectX::XMFLOAT3X4), 1);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
@@ -116,23 +162,21 @@ int main()
 
 	dx12core::GetDx12Core().CreateRaytracingStructure(&vertex);
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_1_matrix);
+	std::vector<RayTracingObject> ray_tracing_objects;
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_2_matrix);
+	int num_cubes = 1;
+	for (int i = 0; i < num_cubes; ++i)
+	{
+		DirectX::XMFLOAT3X4 transform;
+		DirectX::XMMATRIX XMMATRIX_transform = DirectX::XMMatrixRotationRollPitchYaw(0,1,10) * DirectX::XMMatrixTranslation(0.0f, 0.0f, 2.0f);
+		//XMMATRIX_transform = projection_matrix * camera_to_world * XMMATRIX_transform;
+		DirectX::XMStoreFloat3x4(&transform, XMMATRIX_transform);
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_3_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_3_matrix);
+		dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(cube_mesh);
+		RayTracingObject cube_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform);
 
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_4_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_4_matrix);
-
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_5_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_5_matrix);
-
-	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(quad_mesh);
-	RayTracingObject quad_6_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, quad_6_matrix);
+		ray_tracing_objects.push_back(cube_ray_tracing_object);
+	}
 
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex);
 	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(1, transform);
@@ -140,8 +184,10 @@ int main()
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
 	RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform_2);
 
-	dx12core::GetDx12Core().GetRayObjectManager()->CreateScene({ vertex1_ray_tracing_object, vertex2_ray_tracing_object
-		, quad_1_ray_tracing_object }); //, quad_2_ray_tracing_object, quad_3_ray_tracing_object, quad_4_ray_tracing_object, quad_5_ray_tracing_object, quad_6_ray_tracing_object });
+	ray_tracing_objects.push_back(vertex1_ray_tracing_object);
+	ray_tracing_objects.push_back(vertex2_ray_tracing_object);
+
+	dx12core::GetDx12Core().GetRayObjectManager()->CreateScene(ray_tracing_objects); //, quad_2_ray_tracing_object, quad_3_ray_tracing_object, quad_4_ray_tracing_object, quad_5_ray_tracing_object, quad_6_ray_tracing_object });
 	//dx12core::GetDx12Core().GetRayObjectManager()->CreateScene({ vertex2_ray_tracing_object });
 
 	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
@@ -153,9 +199,10 @@ int main()
 	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false, D3D12_ROOT_PARAMETER_TYPE_SRV);
 	raytracing_render_pipeline->AddUnorderedAccess(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(1, D3D12_SHADER_VISIBILITY_ALL, false);
+	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), 1);
-	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours);
+	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours, view_projection_matrix);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();

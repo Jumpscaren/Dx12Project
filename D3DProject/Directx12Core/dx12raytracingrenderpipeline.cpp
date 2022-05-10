@@ -85,7 +85,8 @@ void dx12raytracingrenderpipeline::CreateRayTracingStateObject(const std::string
 	assert(SUCCEEDED(hr));
 }
 
-void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours)
+void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours
+	, BufferResource view_projection_matrix)
 {
 	const int ROOT_ARGUMENT_SIZE = 32;
 	unsigned char root_argument_data[ROOT_ARGUMENT_SIZE];
@@ -109,9 +110,12 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	triangle_colours_handle.ptr += triangle_colours.structured_buffer.descriptor_heap_offset * shader_bindable_size;
 	auto root_arg_3 = triangle_colours_handle;
 
+	auto root_arg_4 = view_projection_matrix.buffer->GetGPUVirtualAddress();
+
 	memcpy(root_argument_data, &root_arg_1, sizeof(root_arg_1));
 	memcpy(root_argument_data + sizeof(root_arg_1), &root_arg_2, sizeof(root_arg_2));
 	memcpy(root_argument_data + sizeof(root_arg_1) + sizeof(root_arg_2), &root_arg_3, sizeof(root_arg_3));
+	memcpy(root_argument_data + sizeof(root_arg_1) + sizeof(root_arg_2) + sizeof(root_arg_3), &root_arg_4, sizeof(root_arg_4));
 
 	//Ray Gen
 	//ShaderRecordF<ROOT_ARGUMENT_SIZE> ray_gen_record_data_fdff;

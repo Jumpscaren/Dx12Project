@@ -17,5 +17,7 @@ public:
 	Window(UINT width, UINT height, std::wstring window_name, std::wstring window_text);
 	bool WinMsg();
 	HWND GetWindowHandle() const;
+	float GetWindowHeight() const;
+	float GetWindowWidth() const;
 };
 
