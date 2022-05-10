@@ -27,13 +27,19 @@ struct RayShaderRecord
 	}
 };
 
-struct MultipleRayShaderRecord
+struct RayShaderRecordTable
 {
+	UINT root_argument_size;
 	UINT entire_shader_record_size;
 	unsigned char* multiple_shader_record_data;
+	BufferResource buffer = {};
 
 	void CopyShaderRecordData(std::vector<RayShaderRecord> ray_shader_records)
 	{
+		UINT same_size_shader_record;
+
+		root_argument_size = ray_shader_records[0].root_argument_size;
+
 		UINT entire_size = 0;
 		for (int i = 0; i < ray_shader_records.size(); ++i)
 		{
@@ -52,6 +58,22 @@ struct MultipleRayShaderRecord
 		}
 
 		entire_shader_record_size = entire_size;
+	}
+
+	~RayShaderRecordTable()
+	{
+		//delete[] multiple_shader_record_data;
+	}
+
+	D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE GetGpuAdressRangeAndStride() const
+	{
+		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE return_address;
+		return_address.StartAddress = buffer.buffer->GetGPUVirtualAddress();
+		return_address.SizeInBytes = entire_shader_record_size;
+		return_address.StrideInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+			+ root_argument_size;
+
+		return return_address;
 	}
 };
 

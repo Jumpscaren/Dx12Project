@@ -17,6 +17,8 @@ private:
 	{
 		BufferResource result_buffer;
 		BufferResource scratch_buffer;
+		UINT hit_shader_index;
+		DirectX::XMFLOAT3X4 transform;
 	};
 	struct TopLevelAccelerationStructures
 	{
@@ -40,12 +42,12 @@ private:
 	UINT BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects);
 	void UpdateTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects, UINT scene_index);
 
-	UINT BuildBottomLevelAcceleratonStructure();
+	UINT BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT3X4 instance_transform, UINT hit_shader_index);
 public:
 	dx12rayobjectmanager();
 	~dx12rayobjectmanager();
 	void AddMesh(BufferResource mesh_buffer, BufferResource transform = {});
-	RayTracingObject CreateRayTracingObject();
+	RayTracingObject CreateRayTracingObject(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {});
 	void CreateScene(const std::vector<RayTracingObject>& objects);
 	void UpdateScene(const std::vector<RayTracingObject>& objects);
 	const BufferResource& GetTopLevelResultAccelerationStructureBuffer();

@@ -20,7 +20,7 @@ void dx12rayobjectmanager::AddMesh(BufferResource mesh_buffer, BufferResource tr
 	m_meshes.push_back(mesh);
 }
 
-RayTracingObject dx12rayobjectmanager::CreateRayTracingObject()
+RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform)
 {
 	//std::vector<UINT> bottom_level_indices;
 	////UINT bottom_level_index = 0;
@@ -39,7 +39,7 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject()
 	//}
 	//UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
 
-	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
+	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(instance_transform, hit_shader_index);
 
 	//UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_indices);
 
@@ -110,9 +110,11 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<
 
 		instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
 			instancingDesc.Transform[2][2] = 1;
+		memcpy(instancingDesc.Transform, bottom_level_acceleration_structure->transform.m, sizeof(bottom_level_acceleration_structure->transform.m));
+		//instancingDesc.Transform = bottom_level_acceleration_structure->transform;
 		instancingDesc.InstanceID = i;
 		instancingDesc.InstanceMask = 0xFF;
-		instancingDesc.InstanceContributionToHitGroupIndex = i % 2;
+		instancingDesc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
 		instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 		instancingDesc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
 
@@ -211,7 +213,7 @@ void dx12rayobjectmanager::UpdateTopLevelAccelerationStructure(const std::vector
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, top_level_acceleration_structure.result_buffer.buffer.Get());
 }
 
-UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure()
+UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT3X4 instance_transform, UINT hit_shader_index)
 {
 	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_meshes.size()); //D3D12_RAYTRACING_GEOMETRY_DESC geometryDescriptions[1];
 
@@ -256,6 +258,9 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure()
 	dx12core::GetDx12Core().GetDirectCommand()->BuildRaytracingAccelerationStructure(&accelerationStructureDesc);
 
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
+
+	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
+	bottom_level_acceleration_structure.transform = instance_transform;
 
 	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
 

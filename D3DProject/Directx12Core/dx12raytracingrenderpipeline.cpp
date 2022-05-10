@@ -136,7 +136,7 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	RayShaderRecord hit_record_data = CreateShaderRecord(ROOT_ARGUMENT_SIZE, L"HitGroup", root_argument_data);
 	RayShaderRecord reflection_hit_record_data = CreateShaderRecord(ROOT_ARGUMENT_SIZE, L"ReflectionHitGroup", root_argument_data);
 
-	MultipleRayShaderRecord hit_records;
+	RayShaderRecordTable hit_records;
 	hit_records.CopyShaderRecordData({hit_record_data, reflection_hit_record_data});
 
 	m_hit_record.buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(hit_records.multiple_shader_record_data), hit_records.entire_shader_record_size, 1, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST);
