@@ -20,6 +20,11 @@ void dx12rayobjectmanager::AddMesh(BufferResource mesh_buffer, BufferResource tr
 	m_meshes.push_back(mesh);
 }
 
+void dx12rayobjectmanager::AddAABB(BufferResource aabb_buffer)
+{
+	m_aabbs.push_back({aabb_buffer});
+}
+
 RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform)
 {
 	//std::vector<UINT> bottom_level_indices;
@@ -39,7 +44,7 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
 	//}
 	//UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
 
-	if (m_meshes.size() == 0)
+	if (m_meshes.size() == 0 || m_aabbs.size() > 0)
 		assert(false);
 
 	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(instance_transform, hit_shader_index);
@@ -57,6 +62,20 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
 	//	m_existing_objects.insert({ (UINT64)vertex_buffer->buffer.Get(), object });
 
 	m_meshes.clear();
+
+	return object;
+}
+
+RayTracingObject dx12rayobjectmanager::CreateRayTracingObjectAABB(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform)
+{
+	if (m_aabbs.size() == 0 || m_meshes.size() > 0)
+		assert(false);
+
+	UINT bottom_level_index = BuildBottomLevelAcceleratonStructureAABB(instance_transform, hit_shader_index);
+
+	RayTracingObject object = { bottom_level_index, bottom_level_index };
+
+	m_aabbs.clear();
 
 	return object;
 }
@@ -240,6 +259,63 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT
 	bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 	bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
 	bottomLevelInputs.NumDescs = m_meshes.size();
+	bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	bottomLevelInputs.pGeometryDescs = geometry_descriptions.data();
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO prebuildInfo;
+	dx12core::GetDx12Core().GetDevice()->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &prebuildInfo);
+
+	BottomLevelAccelerationStructures bottom_level_acceleration_structure;
+	bottom_level_acceleration_structure.result_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+	bottom_level_acceleration_structure.scratch_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(prebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accelerationStructureDesc;
+	accelerationStructureDesc.DestAccelerationStructureData =
+		bottom_level_acceleration_structure.result_buffer.buffer->GetGPUVirtualAddress();
+	accelerationStructureDesc.Inputs = bottomLevelInputs;
+	accelerationStructureDesc.SourceAccelerationStructureData = NULL;
+	accelerationStructureDesc.ScratchAccelerationStructureData =
+		bottom_level_acceleration_structure.scratch_buffer.buffer->GetGPUVirtualAddress();
+
+	dx12core::GetDx12Core().GetDirectCommand()->BuildRaytracingAccelerationStructure(&accelerationStructureDesc);
+
+	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
+
+	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
+	bottom_level_acceleration_structure.transform = instance_transform;
+
+	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
+
+	return m_bottom_level_acceleration_structures.size() - 1;
+}
+
+UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructureAABB(DirectX::XMFLOAT3X4 instance_transform, UINT hit_shader_index)
+{
+	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_aabbs.size()); //D3D12_RAYTRACING_GEOMETRY_DESC geometryDescriptions[1];
+
+	for (int i = 0; i < geometry_descriptions.size(); ++i)
+	{
+		//assert(m_meshes[i].mesh.buffer->GetGPUVirtualAddress() % 16 == 0);
+
+		geometry_descriptions[i].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+		geometry_descriptions[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+		geometry_descriptions[i].AABBs.AABBCount = 1;
+		geometry_descriptions[i].AABBs.AABBs.StartAddress = m_aabbs[i].aabb.buffer->GetGPUVirtualAddress();
+		geometry_descriptions[i].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
+		//geometry_descriptions[i].Triangles.Transform3x4 = m_meshes[i].transform.buffer.Get() == nullptr ? NULL : m_meshes[i].transform.buffer->GetGPUVirtualAddress();//NULL;
+		//geometry_descriptions[i].Triangles.IndexFormat = DXGI_FORMAT_UNKNOWN;
+		//geometry_descriptions[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		//geometry_descriptions[i].Triangles.IndexCount = 0;
+		//geometry_descriptions[i].Triangles.VertexCount = m_meshes[i].mesh.nr_of_elements; //vertex_buffer->nr_of_elements;
+		//geometry_descriptions[i].Triangles.IndexBuffer = NULL;
+		//geometry_descriptions[i].Triangles.VertexBuffer.StartAddress = m_meshes[i].mesh.buffer->GetGPUVirtualAddress();
+		//geometry_descriptions[i].Triangles.VertexBuffer.StrideInBytes = m_meshes[i].mesh.element_size;
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs;
+	bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+	bottomLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	bottomLevelInputs.NumDescs = geometry_descriptions.size();
 	bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 	bottomLevelInputs.pGeometryDescs = geometry_descriptions.data();
 

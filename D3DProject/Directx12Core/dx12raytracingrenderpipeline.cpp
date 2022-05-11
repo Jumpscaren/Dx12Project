@@ -19,7 +19,7 @@ void dx12raytracingrenderpipeline::CreateRayTracingStateObject(const std::string
 	shaderConfig.MaxPayloadSizeInBytes = payload_size;
 
 	// makes it barycentric coordinates
-	shaderConfig.MaxAttributeSizeInBytes = sizeof(float) * 2;
+	shaderConfig.MaxAttributeSizeInBytes = sizeof(float) * 6;//2;
 	stateSubobjects[0].Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
 	stateSubobjects[0].pDesc = &shaderConfig;
 
@@ -69,10 +69,10 @@ void dx12raytracingrenderpipeline::CreateRayTracingStateObject(const std::string
 
 	D3D12_HIT_GROUP_DESC reflectionHitGroupDesc;
 	reflectionHitGroupDesc.HitGroupExport = L"ReflectionHitGroup";
-	reflectionHitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+	reflectionHitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;//D3D12_HIT_GROUP_TYPE_TRIANGLES;
 	reflectionHitGroupDesc.AnyHitShaderImport = nullptr;
 	reflectionHitGroupDesc.ClosestHitShaderImport = L"ReflectionClosestHitShader";//hit_shader_name.c_str();//L"ClosestHitShader";
-	reflectionHitGroupDesc.IntersectionShaderImport = nullptr;
+	reflectionHitGroupDesc.IntersectionShaderImport = L"ReflectionIntersectionShader";
 	stateSubobjects[7].Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
 	stateSubobjects[7].pDesc = &reflectionHitGroupDesc;
 
@@ -86,9 +86,9 @@ void dx12raytracingrenderpipeline::CreateRayTracingStateObject(const std::string
 }
 
 void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours
-	, BufferResource view_projection_matrix)
+	, BufferResource view_projection_matrix, BufferResource sphere_positions)
 {
-	const int ROOT_ARGUMENT_SIZE = 32;
+	const int ROOT_ARGUMENT_SIZE = 64;
 	unsigned char root_argument_data[ROOT_ARGUMENT_SIZE];
 
 	UINT shader_bindable_size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -112,10 +112,21 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 
 	auto root_arg_4 = view_projection_matrix.buffer->GetGPUVirtualAddress();
 
+	D3D12_GPU_DESCRIPTOR_HANDLE sphere_positions_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
+	sphere_positions_handle.ptr += sphere_positions.structured_buffer.descriptor_heap_offset * shader_bindable_size;
+	auto root_arg_5 = sphere_positions_handle;
+
+	int offset = 0;
 	memcpy(root_argument_data, &root_arg_1, sizeof(root_arg_1));
-	memcpy(root_argument_data + sizeof(root_arg_1), &root_arg_2, sizeof(root_arg_2));
-	memcpy(root_argument_data + sizeof(root_arg_1) + sizeof(root_arg_2), &root_arg_3, sizeof(root_arg_3));
-	memcpy(root_argument_data + sizeof(root_arg_1) + sizeof(root_arg_2) + sizeof(root_arg_3), &root_arg_4, sizeof(root_arg_4));
+	offset += sizeof(root_arg_1);
+	memcpy(root_argument_data + offset, &root_arg_2, sizeof(root_arg_2));
+	offset += sizeof(root_arg_2);
+	memcpy(root_argument_data + offset, &root_arg_3, sizeof(root_arg_3));
+	offset += sizeof(root_arg_3);
+	memcpy(root_argument_data + offset, &root_arg_4, sizeof(root_arg_4));
+	offset += sizeof(root_arg_4);
+	memcpy(root_argument_data + offset, &root_arg_5, sizeof(root_arg_5));
+	offset += sizeof(root_arg_5);
 
 	//Ray Gen
 	//ShaderRecordF<ROOT_ARGUMENT_SIZE> ray_gen_record_data_fdff;
@@ -169,17 +180,17 @@ ID3D12RootSignature* dx12raytracingrenderpipeline::GetRaytracingGlobalRootSignat
 	return m_raytracing_global_root_signature.Get();
 }
 
-RayGenerationShaderRecordF<32>* dx12raytracingrenderpipeline::RayGenerationShaderRecord()
+RayGenerationShaderRecordF<64>* dx12raytracingrenderpipeline::RayGenerationShaderRecord()
 {
 	return &m_ray_gen_record;
 }
 
-ShaderTableF<32, 1>* dx12raytracingrenderpipeline::GetMissShaderRecord()
+ShaderTableF<64, 1>* dx12raytracingrenderpipeline::GetMissShaderRecord()
 {
 	return &m_miss_record;
 }
 
-ShaderTableF<32, 2>* dx12raytracingrenderpipeline::GetHitShaderRecord()
+ShaderTableF<64, 2>* dx12raytracingrenderpipeline::GetHitShaderRecord()
 {
 	return &m_hit_record;
 }

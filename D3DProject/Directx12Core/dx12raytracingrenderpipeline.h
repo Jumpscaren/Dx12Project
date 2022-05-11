@@ -124,13 +124,15 @@ struct ShaderTableF
 class dx12raytracingrenderpipeline
 {
 private:
+	const int c_root_argument_size = 64;
+
 	Microsoft::WRL::ComPtr<ID3D12StateObject> m_raytracing_state_object;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_raytracing_local_root_signature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_raytracing_global_root_signature;
 
-	RayGenerationShaderRecordF<32> m_ray_gen_record;
-	ShaderTableF<32, 1> m_miss_record;
-	ShaderTableF<32, 2> m_hit_record;
+	RayGenerationShaderRecordF<64> m_ray_gen_record;
+	ShaderTableF<64, 1> m_miss_record;
+	ShaderTableF<64, 2> m_hit_record;
 
 	std::vector<D3D12_ROOT_PARAMETER> m_local_root_parameters;
 	std::vector<D3D12_ROOT_PARAMETER> m_global_root_parameters;
@@ -162,14 +164,15 @@ public:
 	dx12raytracingrenderpipeline();
 	~dx12raytracingrenderpipeline();
 	void CreateRayTracingStateObject(const std::string& shader_name, const std::wstring& hit_shader_name, UINT payload_size, UINT max_bounces);
-	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours, BufferResource view_projection_matrix);
+	void CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours, BufferResource view_projection_matrix, 
+		BufferResource sphere_positions);
 	void CheckIfRaytracingRenderPipeline();
 	ID3D12StateObject* GetRaytracingStateObject();
 	ID3D12RootSignature* GetRaytracingLocalRootSignature();
 	ID3D12RootSignature* GetRaytracingGlobalRootSignature();
-	RayGenerationShaderRecordF<32>* RayGenerationShaderRecord();
-	ShaderTableF<32, 1>* GetMissShaderRecord();
-	ShaderTableF<32, 2>* GetHitShaderRecord();
+	RayGenerationShaderRecordF<64>* RayGenerationShaderRecord();
+	ShaderTableF<64, 1>* GetMissShaderRecord();
+	ShaderTableF<64, 2>* GetHitShaderRecord();
 
 	void AddConstantBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, D3D12_ROOT_PARAMETER_TYPE parameter_type = D3D12_ROOT_PARAMETER_TYPE_CBV, UINT register_space = 0);
 	void AddStructuredBuffer(UINT binding_slot, D3D12_SHADER_VISIBILITY shader_type, bool global, D3D12_DESCRIPTOR_RANGE_TYPE range_type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT register_space = 0);

@@ -11,3 +11,8 @@ struct RayPayloadData
 	float3 colour;
 	int max_count;
 };
+
+struct SpherePosition
+{
+	float3 position;
+};

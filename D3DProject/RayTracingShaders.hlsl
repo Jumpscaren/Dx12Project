@@ -4,7 +4,7 @@ RaytracingAccelerationStructure scene : register(t0);
 RWTexture2D<float4> outputTexture : register(u0);
 
 static const float3 HIT_COLOUR = float3(0.0f, 0.0f, 1.0f);
-static const float3 MISS_COLOUR = float3(1.0f, 0.0f, 0.0f);
+static const float3 MISS_COLOUR = float3(0.0f, 0.0f, 0.0f);
 static const float3 CLEAR_COLOUR = float3(0.0f, 0.0f, 0.0f);
 
 //struct RayPayloadData
@@ -18,6 +18,7 @@ struct TriangleColour
 };
 
 StructuredBuffer<TriangleColour> colours : register(t1);
+StructuredBuffer<SpherePosition> sphere_positions : register(t2);
 
 cbuffer ViewProjectionMatrix : register(b0)
 {
@@ -80,7 +81,7 @@ void RayGenerationShader()
 [shader("miss")]
 void MissShader(inout RayPayloadData data)
 {
-	data.colour = float3(1.0f, 0.0f, 0.0f);
+	data.colour = float3(0.0f, 0.0f, 0.0f);
 	data.max_count = -1;
 }
 
@@ -90,18 +91,18 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 	//if (data.max_count > 2)
 		//return;
 
-	float3 t = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+	//float3 t = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
-	RayDesc ray;
-	ray.Origin = t;
-	ray.Direction = float3(0.0f, 0.0f, -1.0f);
-	ray.TMin = 0.0f;
-	ray.TMax = 1000.0f;
+	//RayDesc ray;
+	//ray.Origin = t;
+	//ray.Direction = float3(0.0f, 0.0f, -1.0f);
+	//ray.TMin = 0.0f;
+	//ray.TMax = 1000.0f;
 
 	//TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
 
 	//RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
-	data.max_count += 1;
+	//data.max_count += 1;
 
 	int index = InstanceID();
 	//int index = InstanceIndex();
@@ -125,8 +126,72 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 	//data.colour = float3(index, index, index);//float3(0.0f, 0.0f, 1.0f);
 }
 
-[shader("closesthit")]
-void ReflectionClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionAttributes attribs)
+struct SphereNormal
 {
-	data.colour = float3(1.0f, 1.0f, 1.0f);
+	float3 sphere_hit_point;
+	float3 sphere_normal;
+};
+
+[shader("closesthit")]
+void ReflectionClosestHitShader(inout RayPayloadData data, in SphereNormal attribs)
+{
+	//data.colour = attribs.sphere_normal;
+	//return;
+
+	data.max_count += 1;
+
+	if (data.max_count < 2)
+	{
+		float3 t = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
+
+		RayDesc ray;
+		ray.Origin = t; //attribs.sphere_hit_point;
+		ray.Direction = attribs.sphere_normal;//float3(0.0f, 0.0f, -1.0f);//
+		ray.TMin = 0.0f;
+		ray.TMax = 1000.0f;
+
+		TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
+	}
+
+	if (data.max_count == -1)
+	{
+		data.colour = attribs.sphere_normal;
+		data.max_count = 0;
+	}
+}
+
+[shader("intersection")]
+void ReflectionIntersectionShader()
+{
+	//return;
+
+	float tHit = 0;
+
+	float3 position = sphere_positions[InstanceID()-1].position;
+
+	float3 f = ObjectRayOrigin() - position;
+	float b = dot(ObjectRayDirection(), f);
+	float c = dot(f, f) - 1.0f * 1.0f;
+
+	if (b * b - c < 0)
+		return;
+
+	float sqrt_val = sqrt(b*b - c);
+	float t1 = -b - sqrt_val;
+	float t2 = -b + sqrt_val;
+
+	if (t1 < 0 && t2 < 0)
+		return;
+
+	if (t1 < 0)
+		tHit = t2;
+	else
+		tHit = t1;
+
+	SphereNormal attr;
+	attr.sphere_normal = ObjectRayOrigin() + ObjectRayDirection() * tHit;
+	attr.sphere_normal = normalize(attr.sphere_normal - position);					//float3(0, 0, 0);
+	attr.sphere_normal = reflect(ObjectRayDirection(), attr.sphere_normal);
+	//attr.sphere_hit_point = ObjectRayOrigin() + ObjectRayDirection() * tHit;
+	ReportHit(tHit, 0, attr);
 }
