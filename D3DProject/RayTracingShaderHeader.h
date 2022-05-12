@@ -12,7 +12,8 @@ struct RayPayloadData
 	int max_count;
 };
 
-struct SpherePosition
+struct SphereAABB
 {
 	float3 position;
+	float radius;
 };

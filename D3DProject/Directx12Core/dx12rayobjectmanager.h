@@ -8,6 +8,7 @@ struct RayTracingObject
 {
 	UINT bottom_level_index;
 	UINT instance_index;
+	DirectX::XMFLOAT3X4 instance_transform;
 };
 
 class dx12rayobjectmanager
@@ -18,7 +19,6 @@ private:
 		BufferResource result_buffer;
 		BufferResource scratch_buffer;
 		UINT hit_shader_index;
-		DirectX::XMFLOAT3X4 transform;
 	};
 	struct TopLevelAccelerationStructures
 	{
@@ -43,6 +43,9 @@ private:
 	std::vector<AddedMesh> m_meshes;
 	std::vector<AddedProceduralGeometry> m_aabbs;
 
+	std::vector<UINT> internal_meshes_id;
+	std::vector<UINT> internal_aabbs_id;
+
 private:
 	UINT BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects);
 	void UpdateTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects, UINT scene_index);
@@ -56,6 +59,7 @@ public:
 	void AddAABB(BufferResource aabb_buffer);
 	RayTracingObject CreateRayTracingObject(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {});
 	RayTracingObject CreateRayTracingObjectAABB(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {});
+	RayTracingObject CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform = {});
 	void CreateScene(const std::vector<RayTracingObject>& objects);
 	void UpdateScene(const std::vector<RayTracingObject>& objects);
 	const BufferResource& GetTopLevelResultAccelerationStructureBuffer();

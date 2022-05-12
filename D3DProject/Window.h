@@ -2,6 +2,20 @@
 #include <Windows.h>
 #include <string>
 
+struct WindowKeyInputs
+{
+	bool w_key = false;
+	bool a_key = false;
+	bool s_key = false;
+	bool d_key = false;
+	bool shift_key = false;
+	bool left_control_key = false;
+
+	bool q_key = false;
+	bool e_key = false;
+
+};
+
 class Window
 {
 private:
@@ -9,8 +23,12 @@ private:
 	HWND m_window_handle;
 	HINSTANCE m_window_hinstance;
 
+public:
+	static WindowKeyInputs s_window_key_inputs;
+
 private:
-	//LRESULT CALLBACK HandleMsg(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	static LRESULT CALLBACK HandleMsg(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	static void HandleInputs(WPARAM wParam, bool key_down);
 
 public:
 	Window() = delete;

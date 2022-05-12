@@ -1,6 +1,8 @@
 #include "Window.h"
 
-LRESULT CALLBACK HandleMsg(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+WindowKeyInputs Window::s_window_key_inputs = {};
+
+LRESULT CALLBACK Window::HandleMsg(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
@@ -17,9 +19,51 @@ LRESULT CALLBACK HandleMsg(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         PostQuitMessage(0);
         return 0;
     }
+    case WM_KEYDOWN:
+    {
+        HandleInputs(wParam, true);
+        //window->HandleInputs(wParam, true);
+    } break;
+
+    case WM_KEYUP:
+    {
+        HandleInputs(wParam, false);
+        //window->HandleInputs(wParam, false);
+    } break;
     }
 
     return DefWindowProc(hwnd, message, wParam, lParam);
+}
+
+void Window::HandleInputs(WPARAM wParam, bool key_down)
+{
+    switch (wParam)
+    {
+    case 0x41:
+        Window::s_window_key_inputs.a_key = key_down;
+        break;
+    case 0x44:
+        Window::s_window_key_inputs.d_key = key_down;
+        break;
+    case 0x57:
+        Window::s_window_key_inputs.w_key = key_down;
+        break;
+    case 0x53:
+        Window::s_window_key_inputs.s_key = key_down;
+        break;
+    case VK_SHIFT:
+        Window::s_window_key_inputs.shift_key = key_down;
+        break;
+    case VK_CONTROL:
+        Window::s_window_key_inputs.left_control_key = key_down;
+        break;
+    case 0x51:
+        Window::s_window_key_inputs.q_key = key_down;
+        break;
+    case 0x45:
+        Window::s_window_key_inputs.e_key = key_down;
+        break;
+    }
 }
 
 Window::Window(UINT width, UINT height, std::wstring window_name, std::wstring window_text)
@@ -33,7 +77,7 @@ Window::Window(UINT width, UINT height, std::wstring window_name, std::wstring w
     wc.hInstance = m_window_hinstance;
     wc.lpszClassName = window_name.c_str();
     //Set msg handler to the wndproc
-    wc.lpfnWndProc = HandleMsg;//[](HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {return WindowProc(hwnd, uMsg, wParam, lParam);};
+    wc.lpfnWndProc = Window::HandleMsg;
 
     RegisterClassEx(&wc);
 

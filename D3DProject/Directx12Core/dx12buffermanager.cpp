@@ -172,6 +172,17 @@ BufferResource dx12buffermanager::CreateStructuredBuffer(UINT buffer_size, const
 	return buffer_resource;
 }
 
+void dx12buffermanager::UpdateBuffer(BufferResource buffer_resource, void* new_data)
+{
+	UploadBufferData(buffer_resource.buffer.Get(), (unsigned char*)new_data, buffer_resource.element_size);
+
+}
+
+void dx12buffermanager::ResetUploadBuffer()
+{
+	m_upload_current_offset = 0;
+}
+
 BufferResource::BufferResource()
 {
 	structured_buffer.resource_index = -1;

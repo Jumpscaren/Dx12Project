@@ -33,5 +33,9 @@ public:
 	BufferResource CreateBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, const D3D12_HEAP_TYPE& heap_type = D3D12_HEAP_TYPE_DEFAULT);
 	BufferResource CreateStructuredBuffer(void* data, unsigned int elementSize, unsigned int nrOfElements, TextureType texture_type);
 	BufferResource CreateStructuredBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, TextureType texture_type, const D3D12_HEAP_TYPE& heap_type = D3D12_HEAP_TYPE_DEFAULT);
+	
+	void UpdateBuffer(BufferResource buffer_resource, void* new_data);
+
+	void ResetUploadBuffer();
 };
 

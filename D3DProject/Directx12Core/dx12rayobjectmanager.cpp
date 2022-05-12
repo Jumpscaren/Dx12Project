@@ -54,7 +54,9 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
     //UINT bottom_level_index = BuildBottomLevelAccelerationStructure(vertex_buffer);
     //UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
 
-	RayTracingObject object = { bottom_level_index, bottom_level_index };
+	RayTracingObject object = { bottom_level_index, bottom_level_index, instance_transform };
+
+
 
 	////If it does not already exist then we insert it
 	//auto existing_object_it = m_existing_objects.find((UINT64)vertex_buffer->buffer.Get());
@@ -73,11 +75,16 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObjectAABB(UINT hit_shade
 
 	UINT bottom_level_index = BuildBottomLevelAcceleratonStructureAABB(instance_transform, hit_shader_index);
 
-	RayTracingObject object = { bottom_level_index, bottom_level_index };
+	RayTracingObject object = { bottom_level_index, bottom_level_index, instance_transform };
 
 	m_aabbs.clear();
 
 	return object;
+}
+
+RayTracingObject dx12rayobjectmanager::CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform)
+{
+	return {ray_tracing_object.bottom_level_index, ray_tracing_object.bottom_level_index, instance_transform};
 }
 
 void dx12rayobjectmanager::CreateScene(const std::vector<RayTracingObject>& objects)
@@ -132,7 +139,7 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<
 
 		instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
 			instancingDesc.Transform[2][2] = 1;
-		memcpy(instancingDesc.Transform, bottom_level_acceleration_structure->transform.m, sizeof(bottom_level_acceleration_structure->transform.m));
+		memcpy(instancingDesc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
 		//instancingDesc.Transform = bottom_level_acceleration_structure->transform;
 		instancingDesc.InstanceID = i;
 		instancingDesc.InstanceMask = 0xFF;
@@ -282,7 +289,7 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
 
 	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
-	bottom_level_acceleration_structure.transform = instance_transform;
+	//bottom_level_acceleration_structure.transform = instance_transform;
 
 	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
 
@@ -339,7 +346,7 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructureAABB(DirectX::XMF
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
 
 	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
-	bottom_level_acceleration_structure.transform = instance_transform;
+	//bottom_level_acceleration_structure.transform = instance_transform;
 
 	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
 

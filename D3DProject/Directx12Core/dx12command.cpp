@@ -99,6 +99,8 @@ void dx12command::SignalAndWait()
 {
 	Signal();
 	Wait();
+
+	dx12core::GetDx12Core().GetBufferManager()->ResetUploadBuffer();
 }
 
 void dx12command::SetDescriptorHeap(ID3D12DescriptorHeap* descriptor_heap)
