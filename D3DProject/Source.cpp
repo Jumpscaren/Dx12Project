@@ -125,21 +125,34 @@ int main()
 
 	DirectX::XMFLOAT3 camera_position = { 0.0f, 0.0f, -3.0f };
 
-	DirectX::XMMATRIX camera_to_world = DirectX::XMMatrixLookAtLH({camera_position.x, camera_position.y, camera_position.z, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f});
-	float fov = DirectX::XM_PIDIV2;
-	DirectX::XMMATRIX projection_matrix = DirectX::XMMatrixPerspectiveFovLH(fov, window.GetWindowWidth() / window.GetWindowHeight(), 1.0f, 1000.0f);
-	camera_to_world *= projection_matrix;
-	camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
+	DirectX::XMMATRIX view_matrix = DirectX::XMMatrixLookAtLH({camera_position.x, camera_position.y, camera_position.z, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f});
+	float fov = DirectX::XM_PIDIV4;
+	DirectX::XMMATRIX projection_matrix = DirectX::XMMatrixPerspectiveFovLH(fov, window.GetWindowWidth() / window.GetWindowHeight(), 1.0f, 125);
+	DirectX::XMMATRIX view_projection_inverse_matrix = view_matrix * projection_matrix;
+
+	DirectX::XMVECTOR det;
+	view_projection_inverse_matrix = DirectX::XMMatrixInverse(&det, view_projection_inverse_matrix);
+	DirectX::XMMATRIX view_inverse_matrix = DirectX::XMMatrixInverse(&det, view_matrix);
+	DirectX::XMMATRIX projection_inverse_matrix = DirectX::XMMatrixInverse(&det, projection_matrix);
 
 	struct ViewProjectionMatrix
 	{
 		DirectX::XMMATRIX view_projection;
+		DirectX::XMMATRIX view_inverse;
+		DirectX::XMMATRIX projection_inverse;
+		DirectX::XMMATRIX view;
+		DirectX::XMMATRIX projection;
 		DirectX::XMFLOAT3 camera_position;
-		//float camera_position[3];
+		float max_recursion;
 	};
 	ViewProjectionMatrix camera_data;
-	camera_data.view_projection = camera_to_world;
+	camera_data.view_projection = view_projection_inverse_matrix;
+	camera_data.projection_inverse = projection_inverse_matrix;
+	camera_data.view_inverse = view_inverse_matrix;
+	camera_data.projection = projection_matrix;
+	camera_data.view = view_matrix;
 	camera_data.camera_position = camera_position;
+	camera_data.max_recursion = 4;
 	//camera_data.camera_position[0] = camera_position[0]; camera_data.camera_position[1] = camera_position[1]; camera_data.camera_position[2] = camera_position[2];
 
 	BufferResource view_projection_matrix = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&camera_data), sizeof(ViewProjectionMatrix), 1);
@@ -202,6 +215,12 @@ int main()
 	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere);
 	dx12core::GetDx12Core().GetRayObjectManager()->AddAABB(sphere_aabb_buffer);
 	RayTracingObject sphere_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObjectAABB(1, transform_sphere);
+
+
+	XMMATRIX_transform_sphere = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
+		DirectX::XMMatrixTranslation(sphere_aabb_positions[1].position.x, sphere_aabb_positions[1].position.y, sphere_aabb_positions[1].position.z);
+	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere);
+
 	RayTracingObject srto_2 = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere);;
 	ray_tracing_objects.push_back(sphere_ray_tracing_object);
 	ray_tracing_objects.push_back(srto_2);
@@ -232,13 +251,19 @@ int main()
 	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(2, D3D12_SHADER_VISIBILITY_ALL, false);
 	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
-	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), 1);
+	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), camera_data.max_recursion - 1);
 	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours, view_projection_matrix, sphere_aabb_position_buffer);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
 
 	float rotation = 0;
+
+	DirectX::XMFLOAT3 camera_direction = {0.0f, 0.0f, 1.0f};
+	DirectX::XMVECTOR vector_camera_position;
+	DirectX::XMVECTOR vector_camera_direction;
+	DirectX::XMVECTOR vector_up = { 0.0f, 1.0f, 0.0f, 0.0f };
+	DirectX::XMVECTOR vector_result = {};
 
 	bool window_exist = true;
 	while (window_exist)
@@ -254,24 +279,61 @@ int main()
 
 		//rotation += 0.0005f;
 
-		//if (Window::s_window_key_inputs.a_key)
-		//	camera_position.x -= 0.005f;
-		//if (Window::s_window_key_inputs.d_key)
-		//	camera_position.x += 0.005f;
-		//if (Window::s_window_key_inputs.w_key)
-		//	camera_position.z -= 0.005f;
-		//if (Window::s_window_key_inputs.s_key)
-		//	camera_position.z += 0.005f;
-		//if (Window::s_window_key_inputs.shift_key)
-		//	camera_position.y -= 0.005f;
-		//if (Window::s_window_key_inputs.left_control_key)
-		//	camera_position.y += 0.005f;
+		vector_camera_position = DirectX::XMLoadFloat3(&camera_position);
+		vector_camera_direction = DirectX::XMLoadFloat3(&camera_direction);
 
-		camera_to_world = DirectX::XMMatrixLookAtLH({ camera_position.x, camera_position.y, camera_position.z, 0.0f }, 
-			{ 0.0f, 0.0f, camera_position.z + 1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f });
-		camera_to_world *= projection_matrix;
-		camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
-		camera_data.view_projection = camera_to_world;
+		if (Window::s_window_key_inputs.a_key)
+		{
+			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, -0.005f));
+		}
+		if (Window::s_window_key_inputs.d_key)
+		{
+			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, 0.005f));
+		}
+		if (Window::s_window_key_inputs.w_key)
+		{
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, -0.005f));
+		}
+		if (Window::s_window_key_inputs.s_key)
+		{
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, 0.005f));
+		}
+		if (Window::s_window_key_inputs.shift_key)
+		{
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, -0.005f));
+		}
+		if (Window::s_window_key_inputs.left_control_key)
+		{
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, 0.005f));
+		}
+		if (Window::s_window_key_inputs.q_key)
+		{
+			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, -0.005f));
+			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
+		}
+		if (Window::s_window_key_inputs.e_key)
+		{
+			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, 0.005f));
+			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
+		}
+
+		DirectX::XMStoreFloat3(&camera_position, vector_camera_position);
+		DirectX::XMStoreFloat3(&camera_direction, vector_camera_direction);
+
+		//f = DirectX::XMVector3Normalize(f);
+
+		view_matrix = DirectX::XMMatrixLookAtLH({ camera_position.x, camera_position.y, camera_position.z, 0.0f },
+			{ camera_position.x + camera_direction.x, camera_position.y + camera_direction.y, camera_position.z + camera_direction.z, 0.0f},
+			vector_up);
+		//camera_to_world *= projection_matrix;
+		//camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
+		//camera_data.view_projection = camera_to_world;
+		camera_data.view = view_matrix;
+		camera_data.view_inverse = DirectX::XMMatrixInverse(&det, view_matrix);;
 		camera_data.camera_position = { camera_position.x, camera_position.y, camera_position.z};
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(view_projection_matrix, &camera_data);
 

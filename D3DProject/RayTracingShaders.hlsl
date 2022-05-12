@@ -23,7 +23,12 @@ StructuredBuffer<SphereAABB> sphere_AABBs : register(t2);
 cbuffer ViewProjectionMatrix : register(b0)
 {
 	float4x4 view_projection_matrix;
+	float4x4 view_inverse_matrix;
+	float4x4 projection_inverse_matrix;
+	float4x4 view_matrix;
+	float4x4 projection_matrix;
 	float3 camera_position;
+	float max_recursion;
 }
 
 [shader("raygeneration")]
@@ -42,22 +47,35 @@ void RayGenerationShader()
 
 	//float3 origin = float3(currentPixel.x, 1 - currentPixel.y, 0.0f);
 
+	//float2 d = currentPixel.xy + 0.5;
+
+	//// Screen position for the ray
+	//float2 screenPos = d / float2(dispatchDim.xy) * 2.0 - 1.0;
+
+	//// Invert Y for DirectX-style coordinates
+	//screenPos.y = -screenPos.y;
+
+	//float3 origin = float3(screenPos, 0.0f); //+ camera_position;
+
+	//float4 world = mul(float4(screenPos.xy, 0.0f, 1), view_projection_matrix);
+	//world.xyz /= world.w;
+
+	//origin = camera_position;
+
+	//float3 direction = normalize(world.xyz - origin);
+
+
 	float2 d = currentPixel.xy + 0.5;
 
 	// Screen position for the ray
-	float2 screenPos = d / dispatchDim.xy * 2.0 - 1.0;
+	float2 screenPos = d / float2(dispatchDim.xy) * 2.0 - 1.0;
 
 	// Invert Y for DirectX-style coordinates
 	screenPos.y = -screenPos.y;
+	float3 origin = mul(view_inverse_matrix, float4(0, 0, 0, 1));
+	float4 target = mul(projection_inverse_matrix, float4(screenPos.x, screenPos.y, 1, 1));
+	float3 direction = mul(view_inverse_matrix, float4(target.xyz, 0));
 
-	float3 origin = float3(screenPos, 3) + camera_position;
-
-	float4 world = mul(float4(origin, 1), view_projection_matrix);
-	world.xyz /= world.w;
-
-	origin = camera_position;
-
-	float3 direction = normalize(world.xyz - origin);
 
 	RayDesc ray;
 	ray.Origin = origin;
@@ -140,12 +158,12 @@ void ReflectionClosestHitShader(inout RayPayloadData data, in SphereNormal attri
 
 	data.max_count += 1;
 
-	if (data.max_count < 2)
+	if (data.max_count < max_recursion)
 	{
 		float3 t = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 		RayDesc ray;
-		ray.Origin = attribs.sphere_hit_point;
+		ray.Origin = t;//attribs.sphere_hit_point;
 		ray.Direction = reflect(WorldRayDirection(), attribs.sphere_normal);//float3(0.0f, 0.0f, -1.0f);//
 		ray.TMin = 0.0f;
 		ray.TMax = 1000.0f;
@@ -153,6 +171,10 @@ void ReflectionClosestHitShader(inout RayPayloadData data, in SphereNormal attri
 		TraceRay(scene, RAY_FLAG_NONE, 0xFF, 0, 0, 0, ray, data);
 
 		//data.colour = float3(RayTCurrent(), 0.0f, 0.0f) / 10.0f;
+	}
+	else
+	{
+		data.colour = float3(0.2f, 0.2f, 0.2f);
 	}
 
 	if (data.max_count == -1)
@@ -168,21 +190,59 @@ void ReflectionClosestHitShader(inout RayPayloadData data, in SphereNormal attri
 [shader("intersection")]
 void ReflectionIntersectionShader()
 {
-	//return;
+	//float tHit = 0;
+
+	//float3 position = sphere_AABBs[InstanceID()-1].position;
+	//float radius = sphere_AABBs[InstanceID() - 1].radius;
+
+	//float3 f = ObjectRayOrigin() - position;
+	//float b = dot(ObjectRayDirection(), f);
+	//float c = dot(f, f) - radius * radius;
+
+	//if (b * b - c < 0)
+	//	return;
+
+	//float sqrt_val = sqrt(b*b - c);
+	//float t1 = -b - sqrt_val;
+	//float t2 = -b + sqrt_val;
+
+	//if (t1 < 0 && t2 < 0)
+	//	return;
+
+	//if (t1 < 0)
+	//	tHit = t2;
+	//else
+	//	tHit = t1;
+
+	//SphereNormal attr;
+	//attr.sphere_normal = ObjectRayOrigin() + ObjectRayDirection() * tHit;
+	//attr.sphere_normal = normalize(attr.sphere_normal - position);					
+	//attr.sphere_hit_point = ObjectRayOrigin() + ObjectRayDirection() * tHit;
+	//ReportHit(tHit, 0, attr);
 
 	float tHit = 0;
 
-	float3 position = sphere_AABBs[InstanceID()-1].position;
+	float3 position = sphere_AABBs[InstanceID() - 1].position;
+
+	//float4 g = mul(view_matrix, float4(WorldRayOrigin().xyz, 1));
+	//float3 ray_origin = g.xyz;
+	//g = mul(view_matrix, float4(WorldRayDirection().xyz, 0));
+	//g = mul(projection_matrix, float4(g.xyz, 0));
+	//float3 ray_direction = g.xyz;
+
+	float3 ray_origin = WorldRayOrigin();
+	float3 ray_direction = WorldRayDirection();
+
 	float radius = sphere_AABBs[InstanceID() - 1].radius;
 
-	float3 f = ObjectRayOrigin() - position;
-	float b = dot(ObjectRayDirection(), f);
+	float3 f = ray_origin - position;
+	float b = dot(ray_direction, f);
 	float c = dot(f, f) - radius * radius;
 
 	if (b * b - c < 0)
 		return;
 
-	float sqrt_val = sqrt(b*b - c);
+	float sqrt_val = sqrt(b * b - c);
 	float t1 = -b - sqrt_val;
 	float t2 = -b + sqrt_val;
 
@@ -195,9 +255,8 @@ void ReflectionIntersectionShader()
 		tHit = t1;
 
 	SphereNormal attr;
-	attr.sphere_normal = ObjectRayOrigin() + ObjectRayDirection() * tHit;
-	attr.sphere_normal = normalize(attr.sphere_normal - position);					//float3(0, 0, 0);
-	//attr.sphere_normal = reflect(ObjectRayDirection(), attr.sphere_normal);
-	attr.sphere_hit_point = ObjectRayOrigin() + ObjectRayDirection() * tHit;
+	attr.sphere_normal = ray_origin + ray_direction * tHit;
+	attr.sphere_normal = normalize(attr.sphere_normal - position);
+	//attr.sphere_hit_point = ray_origin + ray_direction * tHit;
 	ReportHit(tHit, 0, attr);
 }
