@@ -116,6 +116,10 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	sphere_positions_handle.ptr += sphere_positions.structured_buffer.descriptor_heap_offset * shader_bindable_size;
 	auto root_arg_5 = sphere_positions_handle;
 
+	D3D12_GPU_DESCRIPTOR_HANDLE data_indices_handle = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
+	data_indices_handle.ptr += dx12core::GetDx12Core().GetRayObjectManager()->GetDataIndices().structured_buffer.descriptor_heap_offset * shader_bindable_size;
+	auto root_arg_6 = data_indices_handle;
+
 	int offset = 0;
 	memcpy(root_argument_data, &root_arg_1, sizeof(root_arg_1));
 	offset += sizeof(root_arg_1);
@@ -127,6 +131,8 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	offset += sizeof(root_arg_4);
 	memcpy(root_argument_data + offset, &root_arg_5, sizeof(root_arg_5));
 	offset += sizeof(root_arg_5);
+	memcpy(root_argument_data + offset, &root_arg_6, sizeof(root_arg_6));
+	offset += sizeof(root_arg_6);
 
 	//Ray Gen
 	//ShaderRecordF<ROOT_ARGUMENT_SIZE> ray_gen_record_data_fdff;

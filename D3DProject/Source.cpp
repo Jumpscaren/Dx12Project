@@ -188,18 +188,21 @@ int main()
 
 	std::vector<RayTracingObject> ray_tracing_objects;
 
-	int num_cubes = 1;
+	int num_cubes = 10;
 	for (int i = 0; i < num_cubes; ++i)
 	{
-		DirectX::XMFLOAT3X4 transform;
-		DirectX::XMMATRIX XMMATRIX_transform = DirectX::XMMatrixRotationRollPitchYaw(0,1,10) * DirectX::XMMatrixTranslation(-1.0f, 0.0f, 4.0f);
-		//XMMATRIX_transform = XMMATRIX_transform * camera_to_world * projection_matrix;
-		DirectX::XMStoreFloat3x4(&transform, XMMATRIX_transform);
+		for (int j = 0; j < num_cubes; ++j)
+		{
+			DirectX::XMFLOAT3X4 transform;
+			DirectX::XMMATRIX XMMATRIX_transform = DirectX::XMMatrixRotationRollPitchYaw(i, 1 + i, 10 + i) * DirectX::XMMatrixTranslation(-20.0f + i * 8.0f, sin(i) * 2.0f, -20.0f + j * 8.0f);
 
-		dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(cube_mesh);
-		RayTracingObject cube_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform);
+			DirectX::XMStoreFloat3x4(&transform, XMMATRIX_transform);
 
-		ray_tracing_objects.push_back(cube_ray_tracing_object);
+			dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(cube_mesh);
+			RayTracingObject cube_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform, (i+j) % 3);
+
+			ray_tracing_objects.push_back(cube_ray_tracing_object);
+		}
 	}
 
 	std::vector<SphereAABB> sphere_aabb_positions(10);// = { {1.f,0,2}, 1.0f };
@@ -214,25 +217,25 @@ int main()
 	
 	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere);
 	dx12core::GetDx12Core().GetRayObjectManager()->AddAABB(sphere_aabb_buffer);
-	RayTracingObject sphere_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObjectAABB(1, transform_sphere);
+	RayTracingObject sphere_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObjectAABB(1, transform_sphere, 0);
 
 
 	DirectX::XMMATRIX XMMATRIX_transform_sphere_2 = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
 		DirectX::XMMatrixTranslation(sphere_aabb_positions[1].position.x, sphere_aabb_positions[1].position.y, sphere_aabb_positions[1].position.z);
 	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere_2);
 
-	RayTracingObject srto_2 = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere);;
+	RayTracingObject srto_2 = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere, 1);
 	ray_tracing_objects.push_back(sphere_ray_tracing_object);
 	ray_tracing_objects.push_back(srto_2);
 
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex);
-	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform);
+	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform, 1);
 
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
-	RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform_2);
+	RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform_2, 2);
 
 	ray_tracing_objects.push_back(vertex1_ray_tracing_object);
-	//ray_tracing_objects.push_back(vertex2_ray_tracing_object);
+	ray_tracing_objects.push_back(vertex2_ray_tracing_object);
 
 	//std::vector<UINT> indexes(ray_tracing_objects.size());
 
@@ -250,6 +253,7 @@ int main()
 	raytracing_render_pipeline->AddStructuredBuffer(1, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(2, D3D12_SHADER_VISIBILITY_ALL, false);
+	raytracing_render_pipeline->AddStructuredBuffer(3, D3D12_SHADER_VISIBILITY_ALL, false);
 	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), camera_data.max_recursion - 1);
 	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours, view_projection_matrix, sphere_aabb_position_buffer);
@@ -268,6 +272,7 @@ int main()
 	//camera_data.view_projection = DirectX::XMMatrixInverse(&det, XMMATRIX_transform_sphere);
 
 	bool window_exist = true;
+	float rotation_speed = 0.01f;
 	while (window_exist)
 	{
 		window_exist = window.WinMsg();
@@ -278,8 +283,6 @@ int main()
 		dx12core::GetDx12Core().SetRenderPipeline(render_pipeline);
 		dx12core::GetDx12Core().PreDraw();
 		dx12core::GetDx12Core().Draw();
-
-		//rotation += 0.0005f;
 
 		vector_camera_position = DirectX::XMLoadFloat3(&camera_position);
 		vector_camera_direction = DirectX::XMLoadFloat3(&camera_direction);
@@ -313,13 +316,13 @@ int main()
 		if (Window::s_window_key_inputs.q_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, -0.005f));
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, -rotation_speed));
 			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
 		}
 		if (Window::s_window_key_inputs.e_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, 0.005f));
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, rotation_speed));
 			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
 		}
 
@@ -339,7 +342,14 @@ int main()
 		camera_data.camera_position = { camera_position.x, camera_position.y, camera_position.z};
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(view_projection_matrix, &camera_data);
 
-		//dx12core::GetDx12Core().GetRayObjectManager()->UpdateScene({ vertex1_ray_tracing_object, quad_ray_tracing_object, vertex2_ray_tracing_object });
+		rotation += 0.005f;
+		sphere_aabb_positions[1].position.x = sin(rotation) * 4;
+		sphere_aabb_positions[1].position.z = cos(rotation) * 4;
+		XMMATRIX_transform_sphere_2 = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
+			DirectX::XMMatrixTranslation(sphere_aabb_positions[1].position.x, sphere_aabb_positions[1].position.y, sphere_aabb_positions[1].position.z);
+		DirectX::XMStoreFloat3x4(&ray_tracing_objects[ray_tracing_objects.size() - 3].instance_transform, XMMATRIX_transform_sphere_2);
+		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(sphere_aabb_position_buffer, sphere_aabb_positions.data());
+		dx12core::GetDx12Core().GetRayObjectManager()->UpdateScene(ray_tracing_objects);
 		//dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
 
 		//Raytracing

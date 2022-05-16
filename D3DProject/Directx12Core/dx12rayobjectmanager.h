@@ -7,7 +7,7 @@
 struct RayTracingObject
 {
 	UINT bottom_level_index;
-	UINT instance_index;
+	UINT data_index;
 	DirectX::XMFLOAT3X4 instance_transform;
 };
 
@@ -43,8 +43,8 @@ private:
 	std::vector<AddedMesh> m_meshes;
 	std::vector<AddedProceduralGeometry> m_aabbs;
 
-	std::vector<UINT> internal_meshes_id;
-	std::vector<UINT> internal_aabbs_id;
+	BufferResource m_data_indices;
+	//std::vector<UINT> m;
 
 private:
 	UINT BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects);
@@ -57,14 +57,15 @@ public:
 	~dx12rayobjectmanager();
 	void AddMesh(BufferResource mesh_buffer, BufferResource transform = {});
 	void AddAABB(BufferResource aabb_buffer);
-	RayTracingObject CreateRayTracingObject(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {});
-	RayTracingObject CreateRayTracingObjectAABB(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {});
-	RayTracingObject CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform = {});
+	RayTracingObject CreateRayTracingObject(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {}, UINT data_index = 0);
+	RayTracingObject CreateRayTracingObjectAABB(UINT hit_shader_index = 0, DirectX::XMFLOAT3X4 instance_transform = {}, UINT data_index = 0);
+	RayTracingObject CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform = {}, UINT data_index = 0);
 	void CreateScene(const std::vector<RayTracingObject>& objects);
 	void UpdateScene(const std::vector<RayTracingObject>& objects);
 	const BufferResource& GetTopLevelResultAccelerationStructureBuffer();
 	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer();
 	const BufferResource& GetTopLevelInstanceBuffer();
 	const BufferResource& GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
+	const BufferResource& GetDataIndices() const;
 };
 

@@ -19,6 +19,7 @@ struct TriangleColour
 
 StructuredBuffer<TriangleColour> colours : register(t1);
 StructuredBuffer<SphereAABB> sphere_AABBs : register(t2);
+StructuredBuffer<uint> data_indices : register(t3);
 
 cbuffer ViewProjectionMatrix : register(b0)
 {
@@ -80,7 +81,7 @@ void RayGenerationShader()
 	RayDesc ray;
 	ray.Origin = origin;
 	ray.Direction = direction;//float3(0.0f, 0.0f, 1.0f);
-	ray.TMin = 0.0f;
+	ray.TMin = 0.01f;
 	ray.TMax = 1000.0f;
 
 	RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f), 0};
@@ -122,7 +123,7 @@ void ClosestHitShader(inout RayPayloadData data, in BuiltInTriangleIntersectionA
 	//RayPayloadData payload = { float3(0.0f, 0.0f, 0.0f) };
 	//data.max_count += 1;
 
-	int index = InstanceID();
+	int index = data_indices[InstanceID()];
 	//int index = InstanceIndex();
 	//int index = PrimitiveIndex();
 
@@ -174,13 +175,15 @@ void ReflectionClosestHitShader(inout RayPayloadData data, in SphereNormal attri
 	}
 	else
 	{
-		data.colour = colours[InstanceID()].colour * attribs.sphere_normal;
+		uint data_index = data_indices[InstanceID() % 3];
+		data.colour = colours[data_index].colour * attribs.sphere_normal;
 	}
 
 	if (data.max_count == -1)
 	{
 		//data.colour = attribs.sphere_normal;
-		data.colour = colours[InstanceID()].colour * attribs.sphere_normal;
+		uint data_index = data_indices[InstanceID() % 3];
+		data.colour = colours[data_index].colour * attribs.sphere_normal;
 		data.max_count = 0;
 	}
 
@@ -196,8 +199,10 @@ void ReflectionIntersectionShader()
 
 	float tHit = 0;
 
-	float3 position = sphere_AABBs[InstanceID()-1].position;
-	float radius = sphere_AABBs[InstanceID() - 1].radius;
+	uint data_index = data_indices[InstanceID()];
+
+	float3 position = sphere_AABBs[data_index].position;
+	float radius = sphere_AABBs[data_index].radius;
 
 	float3 f = ray_origin - position;
 	float b = dot(ray_direction, f);

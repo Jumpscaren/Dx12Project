@@ -25,7 +25,7 @@ void dx12rayobjectmanager::AddAABB(BufferResource aabb_buffer)
 	m_aabbs.push_back({aabb_buffer});
 }
 
-RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform)
+RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform, UINT data_index)
 {
 	//std::vector<UINT> bottom_level_indices;
 	////UINT bottom_level_index = 0;
@@ -54,7 +54,7 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
     //UINT bottom_level_index = BuildBottomLevelAccelerationStructure(vertex_buffer);
     //UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
 
-	RayTracingObject object = { bottom_level_index, bottom_level_index, instance_transform };
+	RayTracingObject object = { bottom_level_index, data_index, instance_transform };
 
 
 
@@ -68,28 +68,34 @@ RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_in
 	return object;
 }
 
-RayTracingObject dx12rayobjectmanager::CreateRayTracingObjectAABB(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform)
+RayTracingObject dx12rayobjectmanager::CreateRayTracingObjectAABB(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform, UINT data_index)
 {
 	if (m_aabbs.size() == 0 || m_meshes.size() > 0)
 		assert(false);
 
 	UINT bottom_level_index = BuildBottomLevelAcceleratonStructureAABB(instance_transform, hit_shader_index);
 
-	RayTracingObject object = { bottom_level_index, bottom_level_index, instance_transform };
+	RayTracingObject object = { bottom_level_index, data_index, instance_transform };
 
 	m_aabbs.clear();
 
 	return object;
 }
 
-RayTracingObject dx12rayobjectmanager::CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform)
+RayTracingObject dx12rayobjectmanager::CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform, UINT data_index)
 {
-	return {ray_tracing_object.bottom_level_index, ray_tracing_object.bottom_level_index, instance_transform};
+	return {ray_tracing_object.bottom_level_index, data_index, instance_transform};
 }
 
 void dx12rayobjectmanager::CreateScene(const std::vector<RayTracingObject>& objects)
 {
 	BuildTopLevelAccelerationStructure(objects);
+	std::vector<UINT32> indices(objects.size());
+	for (int i = 0; i < indices.size(); ++i)
+	{
+		indices[i] = objects[i].data_index;
+	}
+	m_data_indices = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(indices.data(), sizeof(UINT32), indices.size(), TextureType::TEXTURE_SRV);
 }
 
 void dx12rayobjectmanager::UpdateScene(const std::vector<RayTracingObject>& objects)
@@ -119,6 +125,11 @@ const BufferResource& dx12rayobjectmanager::GetBottomLevelScratchAccelerationStr
 {
 	//UINT index = m_top_level_acceleration_structures[ray_object.object].bottom_level_indices[0];
 	return m_bottom_level_acceleration_structures[ray_object.bottom_level_index].result_buffer;
+}
+
+const BufferResource& dx12rayobjectmanager::GetDataIndices() const
+{
+	return m_data_indices;
 }
 
 UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects)//UINT bottom_level_index)
@@ -202,11 +213,12 @@ void dx12rayobjectmanager::UpdateTopLevelAccelerationStructure(const std::vector
 
 		D3D12_RAYTRACING_INSTANCE_DESC instancingDesc = {};
 
-		instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
-			instancingDesc.Transform[2][2] = 1;
+		//instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
+		//	instancingDesc.Transform[2][2] = 1;
+		memcpy(instancingDesc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
 		instancingDesc.InstanceID = i;
 		instancingDesc.InstanceMask = 0xFF;
-		instancingDesc.InstanceContributionToHitGroupIndex = 0;
+		instancingDesc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
 		instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
 		instancingDesc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
 
