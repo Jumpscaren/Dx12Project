@@ -152,7 +152,7 @@ int main()
 	camera_data.projection = projection_matrix;
 	camera_data.view = view_matrix;
 	camera_data.camera_position = camera_position;
-	camera_data.max_recursion = 4;
+	camera_data.max_recursion = 5;
 	//camera_data.camera_position[0] = camera_position[0]; camera_data.camera_position[1] = camera_position[1]; camera_data.camera_position[2] = camera_position[2];
 
 	BufferResource view_projection_matrix = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&camera_data), sizeof(ViewProjectionMatrix), 1);
@@ -217,9 +217,9 @@ int main()
 	RayTracingObject sphere_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObjectAABB(1, transform_sphere);
 
 
-	XMMATRIX_transform_sphere = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
+	DirectX::XMMATRIX XMMATRIX_transform_sphere_2 = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
 		DirectX::XMMatrixTranslation(sphere_aabb_positions[1].position.x, sphere_aabb_positions[1].position.y, sphere_aabb_positions[1].position.z);
-	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere);
+	DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere_2);
 
 	RayTracingObject srto_2 = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere);;
 	ray_tracing_objects.push_back(sphere_ray_tracing_object);
@@ -264,6 +264,8 @@ int main()
 	DirectX::XMVECTOR vector_camera_direction;
 	DirectX::XMVECTOR vector_up = { 0.0f, 1.0f, 0.0f, 0.0f };
 	DirectX::XMVECTOR vector_result = {};
+
+	//camera_data.view_projection = DirectX::XMMatrixInverse(&det, XMMATRIX_transform_sphere);
 
 	bool window_exist = true;
 	while (window_exist)
@@ -333,7 +335,7 @@ int main()
 		//camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
 		//camera_data.view_projection = camera_to_world;
 		camera_data.view = view_matrix;
-		camera_data.view_inverse = DirectX::XMMatrixInverse(&det, view_matrix);;
+		camera_data.view_inverse = DirectX::XMMatrixInverse(&det, view_matrix);
 		camera_data.camera_position = { camera_position.x, camera_position.y, camera_position.z};
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(view_projection_matrix, &camera_data);
 
