@@ -3,6 +3,10 @@
 #include "Directx12Core/dx12core.h"
 #include "RayTracingShaderHeader.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_win32.h"
+#include "imgui/imgui_impl_dx12.h"
+
 int main()
 {
 	std::cout << "Hello World\n";
@@ -10,6 +14,26 @@ int main()
 	Window window(1280, 720, L"Project", L"Project");
 	
 	dx12core::GetDx12Core().Init(window.GetWindowHandle(), 2);
+
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+	ImGui::StyleColorsDark();
+
+	auto descriptor_heap = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap();
+	ImGui_ImplWin32_Init(window.GetWindowHandle());
+	ImGui_ImplDX12_Init(dx12core::GetDx12Core().GetDevice(), 1,
+		DXGI_FORMAT_R8G8B8A8_UNORM, descriptor_heap,
+		descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
+		descriptor_heap->GetGPUDescriptorHandleForHeapStart());
+
+	//// Init ImGUI
+	//IMGUI_CHECKVERSION();
+	//auto ctx = ImGui::CreateContext();
+	//ImGui_ImplWin32_Init(m_hwnd);
+	//ImGui::StyleColorsDark();
 
 	TCHAR pwd[MAX_PATH];
 	GetCurrentDirectory(MAX_PATH, pwd);
@@ -272,7 +296,8 @@ int main()
 	//camera_data.view_projection = DirectX::XMMatrixInverse(&det, XMMATRIX_transform_sphere);
 
 	bool window_exist = true;
-	float rotation_speed = 0.01f;
+	float rotation_speed = 0.015f;
+	float fly_speed = 0.04f;
 	while (window_exist)
 	{
 		window_exist = window.WinMsg();
@@ -290,28 +315,28 @@ int main()
 		if (Window::s_window_key_inputs.a_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, -0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, -fly_speed));
 		}
 		if (Window::s_window_key_inputs.d_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, 0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, fly_speed));
 		}
 		if (Window::s_window_key_inputs.w_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, -0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, -fly_speed));
 		}
 		if (Window::s_window_key_inputs.s_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, 0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, fly_speed));
 		}
 		if (Window::s_window_key_inputs.shift_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, -0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, -fly_speed));
 		}
 		if (Window::s_window_key_inputs.left_control_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, 0.005f));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, fly_speed));
 		}
 		if (Window::s_window_key_inputs.q_key)
 		{
@@ -356,10 +381,32 @@ int main()
 		dx12core::GetDx12Core().SetRayTracingRenderPipeline(raytracing_render_pipeline);
 		dx12core::GetDx12Core().PreDispatchRays();
 		dx12core::GetDx12Core().DispatchRays();
+		dx12core::GetDx12Core().AfterDispatchRays();
 
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::Begin("App Statistics");
+		{
+			ImGui::Text("Elapsed Time");
+			//ImGui::Text("FPS = %f", 1.0f / timer.dt());
+			//ImGui::Text("DisplaySize = %f, %f", ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+			//ImGui::Checkbox("My Checkbox", &b);
+			//ImGui::SliderFloat3("Float3", myFloats, 0.0, 5.0);
+		}
+		ImGui::End();
+
+		ImGui::Render();
+
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dx12core::GetDx12Core().GetDirectCommand()->GetCommandList());
 
 		dx12core::GetDx12Core().FinishDraw();
 	}
+
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 
 	delete render_pipeline;
 	delete raytracing_render_pipeline;

@@ -229,3 +229,18 @@ void dx12command::BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_AC
 {
 	m_command_list->BuildRaytracingAccelerationStructure(desc, 0, nullptr);
 }
+
+void dx12command::EndQuery(ID3D12QueryHeap* query, const D3D12_QUERY_TYPE& query_type, UINT index)
+{
+	m_command_list->EndQuery(query, query_type, index);
+}
+
+void dx12command::ResolveQueryData(ID3D12QueryHeap* query, const D3D12_QUERY_TYPE& query_type, UINT index, UINT num_queries, ID3D12Resource* resource, UINT64 offset)
+{
+	m_command_list->ResolveQueryData(query, query_type, index, num_queries, resource, offset);
+}
+
+ID3D12GraphicsCommandList4* dx12command::GetCommandList()
+{
+	return m_command_list.Get();
+}

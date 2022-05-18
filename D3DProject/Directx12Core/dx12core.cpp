@@ -164,6 +164,17 @@ void dx12core::CreateCommandQueue(ID3D12CommandQueue** command_queue, const D3D1
 	assert(SUCCEEDED(hr));
 }
 
+void dx12core::CreateQuery()
+{
+	//D3D12_QUERY_HEAP_DESC heap_desc;
+	//heap_desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+	//heap_desc.Count = queries;
+	//heap_desc.NodeMask = 0;
+	//m_device->CreateQueryHeap(&heap_desc, IID_PPV_ARGS(m_query_timestamp.GetAddressOf()));
+
+	//m_buffer_query_data = m_buffer_manager->CreateBuffer(sizeof(UINT64) * queries, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_HEAP_TYPE_READBACK);
+}
+
 dx12core::dx12core()
 {
 
@@ -235,10 +246,10 @@ void dx12core::FinishDraw()
 {
 	UINT current_backbuffer_index = m_swapchain->GetCurrentBackBufferIndex();
 	ID3D12Resource* back_buffer = m_texture_manager->GetTextureResource(m_backbuffers[current_backbuffer_index].render_target_view.resource_index);
-	
+
 	ID3D12Resource* writable_resource = m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
 
-	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
 	m_direct_command->TransistionBuffer(back_buffer, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
 
@@ -249,7 +260,7 @@ void dx12core::FinishDraw()
 	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	m_direct_command->Execute();
-	m_swapchain->Present(0,0);
+	m_swapchain->Present(0, 0);
 	m_direct_command->SignalAndWait();
 }
 
@@ -336,6 +347,13 @@ void dx12core::DispatchRays()
 	m_direct_command->DispatchRays(&desc);
 }
 
+void dx12core::AfterDispatchRays()
+{
+	ID3D12Resource* writable_resource = m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
+
+	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
 void dx12core::SetTopLevelTransform(float rotation, const RayTracingObject& acceleration_structure_object)
 {
 	DirectX::XMFLOAT3X4 toStore;
@@ -420,6 +438,7 @@ void dx12core::Init(HWND hwnd, UINT backbuffer_count)
 	CreateDevice();
 	CreateCommandQueue(m_direct_command_queue.GetAddressOf(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 	CreateSwapchain(hwnd);
+	CreateQuery();
 
 	m_direct_command = new dx12command(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_texture_manager = new dx12texturemanager(3, 1, 50);

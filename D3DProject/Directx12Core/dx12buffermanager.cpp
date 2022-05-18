@@ -145,6 +145,7 @@ BufferResource dx12buffermanager::CreateBuffer(UINT buffer_size, const D3D12_RES
 	D3D12_HEAP_PROPERTIES heap_properties;
 	ZeroMemory(&heap_properties, sizeof(heap_properties));
 	heap_properties.Type = heap_type;
+	heap_properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> buffer;
 	HRESULT hr = dx12core::GetDx12Core().GetDevice()->CreateCommittedResource(&heap_properties, D3D12_HEAP_FLAG_NONE, &desc, initial_state,

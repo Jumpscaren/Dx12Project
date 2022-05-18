@@ -45,5 +45,9 @@ public:
 	void Draw(UINT vertices, UINT nr_of_objects, UINT start_vertex, UINT start_object);
 	void DispatchRays(D3D12_DISPATCH_RAYS_DESC* description);
 	void BuildRaytracingAccelerationStructure(D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* desc);
+	void EndQuery(ID3D12QueryHeap* query, const D3D12_QUERY_TYPE& query_type, UINT index);
+	void ResolveQueryData(ID3D12QueryHeap* query, const D3D12_QUERY_TYPE& query_type, UINT index, UINT num_queries, ID3D12Resource* resource, UINT64 offset);
+
+	ID3D12GraphicsCommandList4* GetCommandList();
 };
 
