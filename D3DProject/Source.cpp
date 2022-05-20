@@ -7,11 +7,13 @@
 #include "imgui/imgui_impl_win32.h"
 #include "imgui/imgui_impl_dx12.h"
 
+#include <chrono>
+
 int main()
 {
 	std::cout << "Hello World\n";
 
-	Window window(1280, 720, L"Project", L"Project");
+	Window window(2560, 1440, L"Project", L"Project");
 	
 	dx12core::GetDx12Core().Init(window.GetWindowHandle(), 2);
 
@@ -24,10 +26,14 @@ int main()
 
 	auto descriptor_heap = dx12core::GetDx12Core().GetTextureManager()->GetShaderBindableDescriptorHeap();
 	ImGui_ImplWin32_Init(window.GetWindowHandle());
+	auto imgui_cpu_handle = descriptor_heap->GetCPUDescriptorHandleForHeapStart();
+	auto imgui_gpu_handle = descriptor_heap->GetGPUDescriptorHandleForHeapStart();
+	imgui_cpu_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 15;
+	imgui_gpu_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 15;
 	ImGui_ImplDX12_Init(dx12core::GetDx12Core().GetDevice(), 1,
 		DXGI_FORMAT_R8G8B8A8_UNORM, descriptor_heap,
-		descriptor_heap->GetCPUDescriptorHandleForHeapStart(),
-		descriptor_heap->GetGPUDescriptorHandleForHeapStart());
+		imgui_cpu_handle,
+		imgui_gpu_handle);
 
 	//// Init ImGUI
 	//IMGUI_CHECKVERSION();
@@ -229,10 +235,9 @@ int main()
 		}
 	}
 
-	std::vector<SphereAABB> sphere_aabb_positions(10);// = { {1.f,0,2}, 1.0f };
+	std::vector<SphereAABB> sphere_aabb_positions(2);// = { {1.f,0,2}, 1.0f };
 	sphere_aabb_positions[0] = { {1.f,0,2}, 1.0f };
 	sphere_aabb_positions[1] = { {-1.5f,0,0.5f}, 0.85f };
-	BufferResource sphere_aabb_position_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(sphere_aabb_positions.data(), sizeof(SphereAABB), 10, TextureType::TEXTURE_SRV);
 	//BufferResource sphere_aabb_position_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(sizeof(SphereAABB) * 10, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, TextureType::TEXTURE_SRV);
 
 	DirectX::XMFLOAT3X4 transform_sphere;
@@ -251,6 +256,29 @@ int main()
 	RayTracingObject srto_2 = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere, 1);
 	ray_tracing_objects.push_back(sphere_ray_tracing_object);
 	ray_tracing_objects.push_back(srto_2);
+	int sphere_index = ray_tracing_objects.size()-1;
+
+	int num_spheres = 15;
+	for (int i = 0; i < num_spheres; ++i)
+	{
+		for (int j = 0; j < num_spheres; ++j)
+		{
+			for (int k = 0; k < num_spheres; ++k)
+			{
+				sphere_aabb_positions.push_back({ {1.0f - (j + 1) * 2.2f, k * 2.2f, 0.5f + (i + 1) * 2.2f}, 0.5f });
+				int index = sphere_aabb_positions.size() - 1;
+
+				DirectX::XMMATRIX XMMATRIX_transform_sphere_2 = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
+					DirectX::XMMatrixTranslation(sphere_aabb_positions[index].position.x, sphere_aabb_positions[index].position.y, sphere_aabb_positions[index].position.z);
+				DirectX::XMStoreFloat3x4(&transform_sphere, XMMATRIX_transform_sphere_2);
+				RayTracingObject srto = dx12core::GetDx12Core().GetRayObjectManager()->CopyRayTracingObjectAABB(sphere_ray_tracing_object, transform_sphere, index);
+
+				ray_tracing_objects.push_back(srto);
+			}
+		}
+	}
+
+	BufferResource sphere_aabb_position_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(sphere_aabb_positions.data(), sizeof(SphereAABB), sphere_aabb_positions.size(), TextureType::TEXTURE_SRV);
 
 	dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex);
 	RayTracingObject vertex1_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject(0, transform, 1);
@@ -298,8 +326,14 @@ int main()
 	bool window_exist = true;
 	float rotation_speed = 0.015f;
 	float fly_speed = 0.04f;
+
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+	long double duration = 0;
+
 	while (window_exist)
 	{
+		start = std::chrono::high_resolution_clock::now();
+
 		window_exist = window.WinMsg();
 		if (!window_exist)
 			break;
@@ -372,7 +406,7 @@ int main()
 		sphere_aabb_positions[1].position.z = cos(rotation) * 4;
 		XMMATRIX_transform_sphere_2 = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) *
 			DirectX::XMMatrixTranslation(sphere_aabb_positions[1].position.x, sphere_aabb_positions[1].position.y, sphere_aabb_positions[1].position.z);
-		DirectX::XMStoreFloat3x4(&ray_tracing_objects[ray_tracing_objects.size() - 3].instance_transform, XMMATRIX_transform_sphere_2);
+		DirectX::XMStoreFloat3x4(&ray_tracing_objects[sphere_index].instance_transform, XMMATRIX_transform_sphere_2);
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(sphere_aabb_position_buffer, sphere_aabb_positions.data());
 		dx12core::GetDx12Core().GetRayObjectManager()->UpdateScene(ray_tracing_objects);
 		//dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
@@ -389,8 +423,9 @@ int main()
 
 		ImGui::Begin("App Statistics");
 		{
-			ImGui::Text("Elapsed Time");
-			//ImGui::Text("FPS = %f", 1.0f / timer.dt());
+			//ImGui::Text("Elapsed Time");
+			//ImGui::Text("FPS = %f", 1.0f / static_cast<long double>(duration.count()));
+			ImGui::Text("%f milliseconds", duration);
 			//ImGui::Text("DisplaySize = %f, %f", ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
 			//ImGui::Checkbox("My Checkbox", &b);
 			//ImGui::SliderFloat3("Float3", myFloats, 0.0, 5.0);
@@ -402,6 +437,10 @@ int main()
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dx12core::GetDx12Core().GetDirectCommand()->GetCommandList());
 
 		dx12core::GetDx12Core().FinishDraw();
+
+		end = std::chrono::high_resolution_clock::now();
+
+		duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 1e-3;
 	}
 
 	ImGui_ImplDX12_Shutdown();
