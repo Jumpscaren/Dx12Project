@@ -73,19 +73,19 @@ void dx12rayobjectmanager::UpdateScene(const std::vector<RayTracingObject>& obje
 	UpdateTopLevelAccelerationStructure(objects, 0);
 }
 
-const BufferResource& dx12rayobjectmanager::GetTopLevelResultAccelerationStructureBuffer()
+const BufferResource& dx12rayobjectmanager::GetTopLevelResultAccelerationStructureBuffer(UINT top_level_index)
 {
-	return m_top_level_acceleration_structures[0].result_buffer;
+	return m_top_level_acceleration_structures[top_level_index].result_buffer;
 }
 
-const BufferResource& dx12rayobjectmanager::GetTopLevelScratchAccelerationStructureBuffer()
+const BufferResource& dx12rayobjectmanager::GetTopLevelScratchAccelerationStructureBuffer(UINT top_level_index)
 {
-	return m_top_level_acceleration_structures[0].scratch_buffer;
+	return m_top_level_acceleration_structures[top_level_index].scratch_buffer;
 }
 
-const BufferResource& dx12rayobjectmanager::GetTopLevelInstanceBuffer()
+const BufferResource& dx12rayobjectmanager::GetTopLevelInstanceBuffer(UINT top_level_index)
 {
-	return m_top_level_acceleration_structures[0].instance_buffer;
+	return m_top_level_acceleration_structures[top_level_index].instance_buffer;
 }
 
 const BufferResource& dx12rayobjectmanager::GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object)
@@ -112,8 +112,6 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<
 
 		D3D12_RAYTRACING_INSTANCE_DESC instancing_desc = {};
 
-		instancing_desc.Transform[0][0] = instancing_desc.Transform[1][1] =
-			instancing_desc.Transform[2][2] = 1;
 		memcpy(instancing_desc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
 		instancing_desc.InstanceID = i;
 		instancing_desc.InstanceMask = 0xFF;

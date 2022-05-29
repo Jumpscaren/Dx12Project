@@ -76,8 +76,7 @@ void dx12raytracingrenderpipeline::CreateRayTracingStateObject(const std::string
 void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring& ray_generation_shader_name, const std::wstring& miss_shader_name, BufferResource triangle_colours
 	, BufferResource view_projection_matrix, BufferResource sphere_positions, std::vector<HitGroupInfo>& hit_groups)
 {
-	const int ROOT_ARGUMENT_SIZE = 64;
-	unsigned char root_argument_data[ROOT_ARGUMENT_SIZE];
+	unsigned char root_argument_data[c_root_argument_size];
 
 	UINT shader_bindable_size = dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -120,7 +119,7 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	offset += sizeof(root_arg_6);
 
 	//Ray Gen
-	RayShaderRecord ray_gen_record_data = CreateShaderRecord(ROOT_ARGUMENT_SIZE, ray_generation_shader_name.c_str(), root_argument_data);
+	RayShaderRecord ray_gen_record_data = CreateShaderRecord(c_root_argument_size, ray_generation_shader_name.c_str(), root_argument_data);
 
 	m_ray_gen_record.CopyShaderRecordData({ray_gen_record_data});
 
@@ -133,7 +132,7 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 
 	//Miss shader
 
-	RayShaderRecord miss_record_data = CreateShaderRecord(ROOT_ARGUMENT_SIZE, miss_shader_name.c_str(), root_argument_data);
+	RayShaderRecord miss_record_data = CreateShaderRecord(c_root_argument_size, miss_shader_name.c_str(), root_argument_data);
 
 	m_miss_record.CopyShaderRecordData({miss_record_data});
 
@@ -148,7 +147,7 @@ void dx12raytracingrenderpipeline::CreateShaderRecordBuffers(const std::wstring&
 	std::vector<RayShaderRecord> hit_shader_records;
 	for (int i = 0; i < hit_groups.size(); ++i)
 	{
-		RayShaderRecord hit_record_data = CreateShaderRecord(ROOT_ARGUMENT_SIZE, hit_groups[i].hit_group_name.c_str(), root_argument_data);
+		RayShaderRecord hit_record_data = CreateShaderRecord(c_root_argument_size, hit_groups[i].hit_group_name.c_str(), root_argument_data);
 		hit_shader_records.push_back(hit_record_data);
 	}
 

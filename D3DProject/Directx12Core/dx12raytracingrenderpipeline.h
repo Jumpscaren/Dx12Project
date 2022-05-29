@@ -105,6 +105,8 @@ struct HitGroupInfo
 class dx12raytracingrenderpipeline
 {
 private:
+	static const int c_root_argument_size = 64;
+
 	Microsoft::WRL::ComPtr<ID3D12StateObject> m_raytracing_state_object;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_raytracing_local_root_signature;
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_raytracing_global_root_signature;

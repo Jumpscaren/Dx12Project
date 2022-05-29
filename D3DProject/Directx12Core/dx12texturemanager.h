@@ -43,7 +43,6 @@ struct TextureInfo
 class dx12texturemanager
 {
 public:
-	//Temp
 	UINT m_acceleration_counter = 0;
 private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dh_RTV;
@@ -89,5 +88,7 @@ public:
 	ID3D12DescriptorHeap* GetShaderBindableDescriptorHeap();
 	ID3D12DescriptorHeap* GetRenderTargetViewDescriptorHeap();
 	ID3D12DescriptorHeap* GetDepthStencilViewDescriptorHeap();
+
+	void IncreaseShaderBinableDescriptorHeap();
 };
 

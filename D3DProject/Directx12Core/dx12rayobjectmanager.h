@@ -61,9 +61,9 @@ public:
 	RayTracingObject CopyRayTracingObjectAABB(RayTracingObject& ray_tracing_object, DirectX::XMFLOAT3X4 instance_transform = {}, UINT data_index = 0);
 	void CreateScene(const std::vector<RayTracingObject>& objects);
 	void UpdateScene(const std::vector<RayTracingObject>& objects);
-	const BufferResource& GetTopLevelResultAccelerationStructureBuffer();
-	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer();
-	const BufferResource& GetTopLevelInstanceBuffer();
+	const BufferResource& GetTopLevelResultAccelerationStructureBuffer(UINT top_level_index = 0);
+	const BufferResource& GetTopLevelScratchAccelerationStructureBuffer(UINT top_level_index = 0);
+	const BufferResource& GetTopLevelInstanceBuffer(UINT top_level_index = 0);
 	const BufferResource& GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object);
 	const BufferResource& GetDataIndices() const;
 };

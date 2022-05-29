@@ -446,6 +446,11 @@ ID3D12DescriptorHeap* dx12texturemanager::GetDepthStencilViewDescriptorHeap()
 	return m_dh_DSV.Get();
 }
 
+void dx12texturemanager::IncreaseShaderBinableDescriptorHeap()
+{
+	++m_dh_shader_bindable_current_offset;
+}
+
 TextureType operator|(TextureType lhs, TextureType rhs)
 {
 	return TextureType((UINT16)lhs | (UINT16)rhs);

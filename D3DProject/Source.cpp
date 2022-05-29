@@ -13,13 +13,13 @@ int main()
 {
 	std::cout << "Hello World\n";
 
-	Window window(2560, 1440, L"Project", L"Project");
+	//Window window(2560, 1440, L"Project", L"Project");
 
 	//Window window(3840, 2160, L"Project", L"Project");
 
 	//Window window(1920, 1080, L"Project", L"Project");
 
-	//Window window(1280, 720, L"Project", L"Project");
+	Window window(1280, 720, L"Project", L"Project");
 	
 	dx12core::GetDx12Core().Init(window.GetWindowHandle(), 2);
 
@@ -34,8 +34,8 @@ int main()
 	ImGui_ImplWin32_Init(window.GetWindowHandle());
 	auto imgui_cpu_handle = descriptor_heap->GetCPUDescriptorHandleForHeapStart();
 	auto imgui_gpu_handle = descriptor_heap->GetGPUDescriptorHandleForHeapStart();
-	imgui_cpu_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 15;
-	imgui_gpu_handle.ptr += dx12core::GetDx12Core().GetDevice()->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) * 15;
+	dx12core::GetDx12Core().GetTextureManager()->IncreaseShaderBinableDescriptorHeap();
+
 	ImGui_ImplDX12_Init(dx12core::GetDx12Core().GetDevice(), 1,
 		DXGI_FORMAT_R8G8B8A8_UNORM, descriptor_heap,
 		imgui_cpu_handle,
