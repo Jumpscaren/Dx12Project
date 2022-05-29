@@ -44,7 +44,6 @@ private:
 	std::vector<AddedProceduralGeometry> m_aabbs;
 
 	BufferResource m_data_indices;
-	//std::vector<UINT> m;
 
 private:
 	UINT BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects);

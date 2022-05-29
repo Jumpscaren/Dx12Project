@@ -8,27 +8,22 @@ LRESULT CALLBACK Window::HandleMsg(HWND hwnd, UINT message, WPARAM wParam, LPARA
     {
     case WM_CLOSE:
     {
-        //m_isClosed = true;
-        //std::cout << "WM_CLOSE" << std::endl;
         DestroyWindow(hwnd);
         return 0;
     }
     case WM_DESTROY:
     {
-        //std::cout << "WM_DESTROY" << std::endl;
         PostQuitMessage(0);
         return 0;
     }
     case WM_KEYDOWN:
     {
-        HandleInputs(wParam, true);
-        //window->HandleInputs(wParam, true);
+        HandleInputs(wParam, true);;
     } break;
 
     case WM_KEYUP:
     {
         HandleInputs(wParam, false);
-        //window->HandleInputs(wParam, false);
     } break;
     }
 

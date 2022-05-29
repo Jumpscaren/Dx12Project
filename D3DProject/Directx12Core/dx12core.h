@@ -42,10 +42,6 @@ private:
 
 	dx12rayobjectmanager* m_ray_object_manager;
 
-	//const UINT queries = 1;
-	//Microsoft::WRL::ComPtr<ID3D12QueryHeap> m_query_timestamp;
-	//BufferResource m_buffer_query_data;
-
 //Raytracing
 private:
 	TextureResource m_output_uav;
@@ -59,7 +55,6 @@ private:
 	void CreateDevice();
 	void CreateSwapchain(HWND window_handle);
 	void CreateCommandQueue(ID3D12CommandQueue** command_queue, const D3D12_COMMAND_LIST_TYPE& command_type);
-	void CreateQuery();
 	dx12core();
 public:
 	~dx12core();
@@ -83,10 +78,9 @@ public:
 
 //Raytracing
 public:
-	void CreateRaytracingStructure(BufferResource* vertex_buffer);
+	void CreateOutputTexture();
 	TextureResource GetOutputUAV();
 	void PreDispatchRays();
 	void DispatchRays();
 	void AfterDispatchRays();
-	void SetTopLevelTransform(float rotation, const RayTracingObject& acceleration_structure_object);
 };

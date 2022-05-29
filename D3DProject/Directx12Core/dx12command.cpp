@@ -177,7 +177,7 @@ void dx12command::Reset()
 {
 	HRESULT hr = m_command_allocator->Reset();
 	assert(SUCCEEDED(hr));
-	hr = m_command_list->Reset(m_command_allocator.Get(), nullptr); // nullptr is initial state, no initial state
+	hr = m_command_list->Reset(m_command_allocator.Get(), nullptr); 
 	assert(SUCCEEDED(hr));
 }
 

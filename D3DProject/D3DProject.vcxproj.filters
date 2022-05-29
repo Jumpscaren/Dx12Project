@@ -36,9 +36,6 @@
     <ClCompile Include="Directx12Core\dx12renderpipeline.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JRaytracing.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Directx12Core\dx12rayobjectmanager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -87,9 +84,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Directx12Core\dx12renderpipeline.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="JRaytracing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RayTracingShaderHeader.h">

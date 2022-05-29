@@ -58,10 +58,6 @@ private:
 
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_view_resources;
 
-	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_render_target_view_resources;
-	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_depth_stencil_view_resources;
-	//std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_shader_bindable_resources;
-
 	Microsoft::WRL::ComPtr<ID3D12Heap> m_upload_heap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_upload_buffer;
 	UINT64 m_upload_current_offset;

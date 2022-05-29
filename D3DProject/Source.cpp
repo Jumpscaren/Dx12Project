@@ -14,10 +14,16 @@ int main()
 	std::cout << "Hello World\n";
 
 	Window window(2560, 1440, L"Project", L"Project");
+
+	//Window window(3840, 2160, L"Project", L"Project");
+
+	//Window window(1920, 1080, L"Project", L"Project");
+
+	//Window window(1280, 720, L"Project", L"Project");
 	
 	dx12core::GetDx12Core().Init(window.GetWindowHandle(), 2);
 
-	// Setup Dear ImGui context
+	// Setup ImGui context
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -35,12 +41,6 @@ int main()
 		imgui_cpu_handle,
 		imgui_gpu_handle);
 
-	//// Init ImGUI
-	//IMGUI_CHECKVERSION();
-	//auto ctx = ImGui::CreateContext();
-	//ImGui_ImplWin32_Init(m_hwnd);
-	//ImGui::StyleColorsDark();
-
 	TCHAR pwd[MAX_PATH];
 	GetCurrentDirectory(MAX_PATH, pwd);
 	std::wstring gf(pwd);
@@ -49,24 +49,24 @@ int main()
 
 	TextureResource texture = dx12core::GetDx12Core().GetTextureManager()->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
 
-	struct SimpleVertex
+	struct Vertex
 	{
 		float position[3];
 		float uv[2];
 	};
-	SimpleVertex triangle[3] =
+	Vertex triangle[3] =
 	{
 		{{-0.5f, -0.5f, 0.0f}, {0.0f, 1.0f}},
 		{{0.0f, 0.5f, 0.0f}, {0.5f, 0.0f}},
 		{{0.5f, -0.5f, 0.0f}, {1.0f, 1.0f}}
 	};
-	SimpleVertex triangle_2[3] =
+	Vertex triangle_2[3] =
 	{
 		{{-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
 		{{0.0f, 1.0f, 0.0f}, {0.5f, 0.0f}},
 		{{1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}}
 	};
-	SimpleVertex quad[6] =
+	Vertex quad[6] =
 	{
 		{{-0.75f, -0.75f, 0.5f}, {0.0f, 1.0f}},
 		{{-0.75f, 0.75f, 0.5f}, {0.0f, 0.0f}},
@@ -76,9 +76,9 @@ int main()
 		{{0.75f, 0.75f, 0.5f}, {1.0f, 0.0f}},
 		{{0.75f, -0.75f, 0.5f}, {1.0f, 1.0f}},
 	};
-	SimpleVertex cube[36] =
+	Vertex cube[36] =
 	{
-		{{-1.0f,-1.0f,-1.0f}, {0,0}}, // triangle 1 : begin
+		{{-1.0f,-1.0f,-1.0f}, {0,0}}, 
 		{{-1.0f,-1.0f, 1.0f}, {0,0}},
 		{{-1.0f, 1.0f, 1.0f}, {0,0}},
 
@@ -135,24 +135,19 @@ int main()
 	sphere_aabb.MinZ = -1;
 	sphere_aabb.MaxZ = 1;
 
-	BufferResource vertex = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
-	BufferResource vertex_2 = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle_2, sizeof(SimpleVertex), 3, TextureType::TEXTURE_SRV);
-	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(SimpleVertex), 6, TextureType::TEXTURE_SRV);
-	BufferResource cube_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(cube, sizeof(SimpleVertex), 36, TextureType::TEXTURE_SRV);
+	BufferResource vertex = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle, sizeof(Vertex), 3, TextureType::TEXTURE_SRV);
+	BufferResource vertex_2 = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(triangle_2, sizeof(Vertex), 3, TextureType::TEXTURE_SRV);
+	BufferResource quad_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(quad, sizeof(Vertex), 6, TextureType::TEXTURE_SRV);
+	BufferResource cube_mesh = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(cube, sizeof(Vertex), 36, TextureType::TEXTURE_SRV);
 	BufferResource sphere_aabb_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(&sphere_aabb, sizeof(D3D12_RAYTRACING_AABB), 1, TextureType::TEXTURE_SRV);
 
-	float colours[24] = {1.0f, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f,
-						0.0f, 1.0f, 0.0f,
-						1.0f, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f,
-						0.0f, 1.0f, 0.0f,
-						1.0f, 0.0f, 0.0f,
-						0.0f, 0.0f, 1.0f,
-										};
+	TriangleColour colours[3] = { {{1.0f, 0.0f, 0.0f}}, {{0.0f, 0.0f, 1.0f}}, {{0.0f, 1.0f, 0.0f}} };
 
-	BufferResource triangle_colours = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(&colours, 3 * sizeof(float), 8, TextureType::TEXTURE_SRV);
+	BufferResource triangle_colours = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(&colours, sizeof(colours), 3, TextureType::TEXTURE_SRV);
 
+
+	//Set up the camera
+	//DirectX::XMFLOAT3 camera_position = { -20.0f, 10.0f, 10.0f };
 	DirectX::XMFLOAT3 camera_position = { 0.0f, 0.0f, -3.0f };
 
 	DirectX::XMMATRIX view_matrix = DirectX::XMMatrixLookAtLH({camera_position.x, camera_position.y, camera_position.z, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f});
@@ -167,23 +162,16 @@ int main()
 
 	struct ViewProjectionMatrix
 	{
-		DirectX::XMMATRIX view_projection;
 		DirectX::XMMATRIX view_inverse;
 		DirectX::XMMATRIX projection_inverse;
-		DirectX::XMMATRIX view;
-		DirectX::XMMATRIX projection;
 		DirectX::XMFLOAT3 camera_position;
 		float max_recursion;
 	};
 	ViewProjectionMatrix camera_data;
-	camera_data.view_projection = view_projection_inverse_matrix;
 	camera_data.projection_inverse = projection_inverse_matrix;
 	camera_data.view_inverse = view_inverse_matrix;
-	camera_data.projection = projection_matrix;
-	camera_data.view = view_matrix;
 	camera_data.camera_position = camera_position;
 	camera_data.max_recursion = 5;
-	//camera_data.camera_position[0] = camera_position[0]; camera_data.camera_position[1] = camera_position[1]; camera_data.camera_position[2] = camera_position[2];
 
 	BufferResource view_projection_matrix = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&camera_data), sizeof(ViewProjectionMatrix), 1);
 
@@ -193,19 +181,16 @@ int main()
 	DirectX::XMMATRIX transform_matrix_2 = DirectX::XMMatrixTranslation(0, 0.5f, 0) * DirectX::XMMatrixRotationZ(10);
 	DirectX::XMStoreFloat3x4(&transform_2, transform_matrix_2);
 
-	BufferResource vertex_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform), sizeof(DirectX::XMFLOAT3X4), 1);
-	BufferResource vertex_2_transform = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*)(&transform_2), sizeof(DirectX::XMFLOAT3X4), 1);
-
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
 
+	//Create rasterizer pipeline
 	dx12renderpipeline* render_pipeline = new dx12renderpipeline();
 	render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_VERTEX, false);
 	render_pipeline->AddShaderResource(0, D3D12_SHADER_VISIBILITY_PIXEL, false);
 	render_pipeline->AddStaticSampler(D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 0, D3D12_SHADER_VISIBILITY_PIXEL, false);
-
 	render_pipeline->CreateRenderPipeline("x64/Debug/VertexShader1.cso", "x64/Debug/PixelShader1.cso");
-
+	//Create renderobject for the quad
 	auto object = render_pipeline->CreateRenderObject();
 	object->AddStructuredBuffer(quad_mesh, 0, D3D12_SHADER_VISIBILITY_VERTEX, false);
 	object->AddShaderResourceView(texture, 0, D3D12_SHADER_VISIBILITY_PIXEL, false);
@@ -214,10 +199,12 @@ int main()
 	dx12core::GetDx12Core().GetDirectCommand()->Reset();
 	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(vertex.buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 
-	dx12core::GetDx12Core().CreateRaytracingStructure(&vertex);
+	dx12core::GetDx12Core().CreateOutputTexture();
 
+	//Raytracing objects for the scene (TLAS)
 	std::vector<RayTracingObject> ray_tracing_objects;
 
+	//Create cubes
 	int num_cubes = 10;
 	for (int i = 0; i < num_cubes; ++i)
 	{
@@ -235,10 +222,10 @@ int main()
 		}
 	}
 
-	std::vector<SphereAABB> sphere_aabb_positions(2);// = { {1.f,0,2}, 1.0f };
+	//Create spheres
+	std::vector<SphereAABB> sphere_aabb_positions(2);
 	sphere_aabb_positions[0] = { {1.f,0,2}, 1.0f };
 	sphere_aabb_positions[1] = { {-1.5f,0,0.5f}, 0.85f };
-	//BufferResource sphere_aabb_position_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateStructuredBuffer(sizeof(SphereAABB) * 10, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COMMON, TextureType::TEXTURE_SRV);
 
 	DirectX::XMFLOAT3X4 transform_sphere;
 	DirectX::XMMATRIX XMMATRIX_transform_sphere = DirectX::XMMatrixRotationRollPitchYaw(0, 0, 0) * 
@@ -289,26 +276,24 @@ int main()
 	ray_tracing_objects.push_back(vertex1_ray_tracing_object);
 	ray_tracing_objects.push_back(vertex2_ray_tracing_object);
 
-	//std::vector<UINT> indexes(ray_tracing_objects.size());
 
-	dx12core::GetDx12Core().GetRayObjectManager()->CreateScene(ray_tracing_objects); //, quad_2_ray_tracing_object, quad_3_ray_tracing_object, quad_4_ray_tracing_object, quad_5_ray_tracing_object, quad_6_ray_tracing_object });
-	//dx12core::GetDx12Core().GetRayObjectManager()->CreateScene({ vertex2_ray_tracing_object });
+	dx12core::GetDx12Core().GetRayObjectManager()->CreateScene(ray_tracing_objects);
 
-	//dx12core::GetDx12Core().GetRayObjectManager()->AddMesh(vertex_2);
-	//RayTracingObject vertex2_ray_tracing_object = dx12core::GetDx12Core().GetRayObjectManager()->CreateRayTracingObject();
-
+	//Setup the root signature and create the stateobject
 	dx12raytracingrenderpipeline* raytracing_render_pipeline = new dx12raytracingrenderpipeline();
-	//raytracing_render_pipeline->AddStructuredBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);//, D3D12_DESCRIPTOR_RANGE_TYPE_UAV);
 	raytracing_render_pipeline->AddShaderResource(0, D3D12_SHADER_VISIBILITY_ALL, false);
-	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false, D3D12_ROOT_PARAMETER_TYPE_SRV);
 	raytracing_render_pipeline->AddUnorderedAccess(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(1, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(2, D3D12_SHADER_VISIBILITY_ALL, false);
 	raytracing_render_pipeline->AddStructuredBuffer(3, D3D12_SHADER_VISIBILITY_ALL, false);
-	//raytracing_render_pipeline->AddConstantBuffer(0, D3D12_SHADER_VISIBILITY_ALL, false);
-	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", L"ClosestHitShader", sizeof(RayPayloadData), camera_data.max_recursion - 1);
-	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours, view_projection_matrix, sphere_aabb_position_buffer);
+
+	std::vector<HitGroupInfo> hit_groups(2);
+	hit_groups[0].hit_group_name = L"HitGroup"; hit_groups[0].closest_hit_shader_name = L"ClosestHitShader"; hit_groups[0].hit_type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+	hit_groups[1].hit_group_name = L"ReflectionHitGroup"; hit_groups[1].closest_hit_shader_name = L"ReflectionClosestHitShader"; hit_groups[1].hit_type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+	hit_groups[1].intersection_shader_name = L"ReflectionIntersectionShader";
+	raytracing_render_pipeline->CreateRayTracingStateObject("x64/Debug/RayTracingShaders.cso", hit_groups, sizeof(RayPayloadData), sizeof(SphereNormal), camera_data.max_recursion - 1);
+	raytracing_render_pipeline->CreateShaderRecordBuffers(L"RayGenerationShader", L"MissShader", triangle_colours, view_projection_matrix, sphere_aabb_position_buffer, hit_groups);
 
 	dx12core::GetDx12Core().GetDirectCommand()->Execute();
 	dx12core::GetDx12Core().GetDirectCommand()->SignalAndWait();
@@ -321,14 +306,17 @@ int main()
 	DirectX::XMVECTOR vector_up = { 0.0f, 1.0f, 0.0f, 0.0f };
 	DirectX::XMVECTOR vector_result = {};
 
-	//camera_data.view_projection = DirectX::XMMatrixInverse(&det, XMMATRIX_transform_sphere);
-
 	bool window_exist = true;
-	float rotation_speed = 0.015f;
-	float fly_speed = 0.04f;
+	float rotation_speed = 0.0015f;
+	float fly_speed = 0.004f;
 
 	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	long double duration = 0;
+
+	//For the performance test
+	const long double max_duration = 15000.0f;
+	long double total_duration = 0;
+	long double total_frames = 0;
 
 	while (window_exist)
 	{
@@ -346,61 +334,62 @@ int main()
 		vector_camera_position = DirectX::XMLoadFloat3(&camera_position);
 		vector_camera_direction = DirectX::XMLoadFloat3(&camera_direction);
 
+		float new_fly_speed = duration * fly_speed;
+		float new_rotation_speed = duration * rotation_speed;
+
 		if (Window::s_window_key_inputs.a_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, -fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, -new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.d_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_result, new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.w_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, -fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, -new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.s_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_camera_direction, new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.shift_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, -fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, -new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.left_control_key)
 		{
-			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, fly_speed));
+			vector_camera_position = DirectX::XMVectorSubtract(vector_camera_position, DirectX::XMVectorScale(vector_up, new_fly_speed));
 		}
 		if (Window::s_window_key_inputs.q_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, -rotation_speed));
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, -new_rotation_speed));
 			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
 		}
 		if (Window::s_window_key_inputs.e_key)
 		{
 			vector_result = DirectX::XMVector3Cross(vector_camera_direction, vector_up);
-			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, rotation_speed));
+			vector_result = DirectX::XMVectorSubtract(vector_camera_direction, DirectX::XMVectorScale(vector_result, new_rotation_speed));
 			vector_camera_direction = DirectX::XMVector3Normalize(vector_result);
 		}
 
+
+		//Update the camera
 		DirectX::XMStoreFloat3(&camera_position, vector_camera_position);
 		DirectX::XMStoreFloat3(&camera_direction, vector_camera_direction);
-
-		//f = DirectX::XMVector3Normalize(f);
-
 		view_matrix = DirectX::XMMatrixLookAtLH({ camera_position.x, camera_position.y, camera_position.z, 0.0f },
 			{ camera_position.x + camera_direction.x, camera_position.y + camera_direction.y, camera_position.z + camera_direction.z, 0.0f},
 			vector_up);
-		//camera_to_world *= projection_matrix;
-		//camera_to_world = DirectX::XMMatrixInverse(nullptr, camera_to_world);
-		//camera_data.view_projection = camera_to_world;
-		camera_data.view = view_matrix;
+
 		camera_data.view_inverse = DirectX::XMMatrixInverse(&det, view_matrix);
 		camera_data.camera_position = { camera_position.x, camera_position.y, camera_position.z};
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(view_projection_matrix, &camera_data);
 
+
+		//Move the sphere
 		rotation += 0.005f;
 		sphere_aabb_positions[1].position.x = sin(rotation) * 4;
 		sphere_aabb_positions[1].position.z = cos(rotation) * 4;
@@ -409,7 +398,6 @@ int main()
 		DirectX::XMStoreFloat3x4(&ray_tracing_objects[sphere_index].instance_transform, XMMATRIX_transform_sphere_2);
 		dx12core::GetDx12Core().GetBufferManager()->UpdateBuffer(sphere_aabb_position_buffer, sphere_aabb_positions.data());
 		dx12core::GetDx12Core().GetRayObjectManager()->UpdateScene(ray_tracing_objects);
-		//dx12core::GetDx12Core().SetTopLevelTransform(rotation, vertex1_ray_tracing_object);
 
 		//Raytracing
 		dx12core::GetDx12Core().SetRayTracingRenderPipeline(raytracing_render_pipeline);
@@ -423,12 +411,7 @@ int main()
 
 		ImGui::Begin("App Statistics");
 		{
-			//ImGui::Text("Elapsed Time");
-			//ImGui::Text("FPS = %f", 1.0f / static_cast<long double>(duration.count()));
-			ImGui::Text("%f milliseconds", duration);
-			//ImGui::Text("DisplaySize = %f, %f", ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-			//ImGui::Checkbox("My Checkbox", &b);
-			//ImGui::SliderFloat3("Float3", myFloats, 0.0, 5.0);
+			ImGui::Text("%f ms", duration);
 		}
 		ImGui::End();
 
@@ -441,7 +424,15 @@ int main()
 		end = std::chrono::high_resolution_clock::now();
 
 		duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() * 1e-3;
+		++total_frames;
+		total_duration += duration;
+		//if (total_duration >= max_duration)
+		//	break;
 	}
+
+	std::cout << "Frames: " << total_frames << "\n";
+	std::cout << "Total Duration: " << total_duration << "\n";
+	std::cout << "Average Duration: " << total_duration / total_frames << "\n";
 
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
@@ -449,8 +440,6 @@ int main()
 
 	delete render_pipeline;
 	delete raytracing_render_pipeline;
-
-	//dx12core::GetDx12Core();
 
 	return 0;
 }

@@ -18,12 +18,7 @@ void dx12buffermanager::UploadBufferData(ID3D12Resource* upload_resource, unsign
 
 	unsigned int source_offset = 0;
 
-	//UINT buffer_upload_offset = update_upload_offset;
-	//If upload_offset is -1 then we are creating the buffer for the first time
-	//if (buffer_upload_offset == -1)
-		//buffer_upload_offset = m_current_upload_offset;
-
-	size_t destination_offset = ((m_upload_current_offset + (alignment - 1)) & ~(alignment - 1));//AlignAdress(buffer_upload_offset, alignment);
+	size_t destination_offset = ((m_upload_current_offset + (alignment - 1)) & ~(alignment - 1));
 
 	for (UINT row = 0; row < nr_of_rows; ++row)
 	{
@@ -34,18 +29,11 @@ void dx12buffermanager::UploadBufferData(ID3D12Resource* upload_resource, unsign
 
 	dx12core::GetDx12Core().GetDirectCommand()->CopyBufferRegion(upload_resource, m_upload_buffer.Get(), 0, ((m_upload_current_offset + (alignment - 1)) & ~(alignment - 1)), resourceDesc.Width);
 
-	//dx12core::GetDx12Core().GetDirectCommand()->CopyBufferRegion(upload_resource, 0, m_upload_buffer,
-	//	((m_upload_current_offset + (alignment - 1)) & ~(alignment - 1)), resourceDesc.Width);
-
 	m_upload_buffer->Unmap(0, nullptr);
 
 	//Transition the buffer to common state
 	dx12core::GetDx12Core().GetDirectCommand()->TransistionBuffer(upload_resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
-	//m_renderer->AddTransitionResource(upload_resource, m_renderer->GetCurrentDirectCommand()->cmd_list, D3D12_RESOURCE_STATE_COPY_DEST,
-		//D3D12_RESOURCE_STATE_COMMON);
 
-	//If upload_offset is not -1 then we are updating the buffer
-	//And do not need to update the upload offset
 	m_upload_current_offset = destination_offset;
 }
 
@@ -155,7 +143,7 @@ BufferResource dx12buffermanager::CreateBuffer(UINT buffer_size, const D3D12_RES
 	BufferResource buffer_resource;
 	buffer_resource.buffer = buffer;
 	buffer_resource.element_size = buffer_size;
-	buffer_resource.nr_of_elements = 1;//nrOfElements;
+	buffer_resource.nr_of_elements = 1;
 	return buffer_resource;
 }
 
@@ -168,7 +156,7 @@ BufferResource dx12buffermanager::CreateStructuredBuffer(void* data, unsigned in
 
 BufferResource dx12buffermanager::CreateStructuredBuffer(UINT buffer_size, const D3D12_RESOURCE_FLAGS& flags, const D3D12_RESOURCE_STATES& initial_state, TextureType texture_type, const D3D12_HEAP_TYPE& heap_type)
 {
-	BufferResource buffer_resource = CreateBuffer(buffer_size, flags, initial_state, heap_type);//CreateBuffer(data, elementSize, nrOfElements);
+	BufferResource buffer_resource = CreateBuffer(buffer_size, flags, initial_state, heap_type);
 	buffer_resource.structured_buffer = m_texture_manager->CreateStructuredBuffer(buffer_resource.buffer.Get(), buffer_size, 1, texture_type);
 	return buffer_resource;
 }

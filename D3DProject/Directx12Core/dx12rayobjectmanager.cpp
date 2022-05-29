@@ -10,12 +10,11 @@ dx12rayobjectmanager::~dx12rayobjectmanager()
 	m_bottom_level_acceleration_structures.clear();
 	m_top_level_acceleration_structures.clear();
 	m_meshes.clear();
+	m_aabbs.clear();
 }
 
 void dx12rayobjectmanager::AddMesh(BufferResource mesh_buffer, BufferResource transform)
 {
-	//BufferResource transform_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer((void*) (&transform), sizeof(DirectX::XMFLOAT3X4), 1);
-
 	AddedMesh mesh = { mesh_buffer, transform };
 	m_meshes.push_back(mesh);
 }
@@ -27,41 +26,12 @@ void dx12rayobjectmanager::AddAABB(BufferResource aabb_buffer)
 
 RayTracingObject dx12rayobjectmanager::CreateRayTracingObject(UINT hit_shader_index, DirectX::XMFLOAT3X4 instance_transform, UINT data_index)
 {
-	//std::vector<UINT> bottom_level_indices;
-	////UINT bottom_level_index = 0;
-	//if (one_bottom_acceleration_structure)
-	//{
-	//	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(m_meshes.size(), -1);
-	//	bottom_level_indices.push_back(bottom_level_index);
-	//}
-	//else
-	//{
-	//	for (int i = 0; i < m_meshes.size(); ++i)
-	//	{
-	//		UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(1, i);
-	//		bottom_level_indices.push_back(bottom_level_index);
-	//	}
-	//}
-	//UINT bottom_level_index = BuildBottomLevelAcceleratonStructure();
-
 	if (m_meshes.size() == 0 || m_aabbs.size() > 0)
 		assert(false);
 
 	UINT bottom_level_index = BuildBottomLevelAcceleratonStructure(instance_transform, hit_shader_index);
 
-	//UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_indices);
-
-    //UINT bottom_level_index = BuildBottomLevelAccelerationStructure(vertex_buffer);
-    //UINT top_level_index = BuildTopLevelAccelerationStructure(bottom_level_index);
-
 	RayTracingObject object = { bottom_level_index, data_index, instance_transform };
-
-
-
-	////If it does not already exist then we insert it
-	//auto existing_object_it = m_existing_objects.find((UINT64)vertex_buffer->buffer.Get());
-	//if (existing_object_it == m_existing_objects.end())
-	//	m_existing_objects.insert({ (UINT64)vertex_buffer->buffer.Get(), object });
 
 	m_meshes.clear();
 
@@ -105,25 +75,21 @@ void dx12rayobjectmanager::UpdateScene(const std::vector<RayTracingObject>& obje
 
 const BufferResource& dx12rayobjectmanager::GetTopLevelResultAccelerationStructureBuffer()
 {
-	//return m_top_level_acceleration_structures[ray_object.object].result_buffer;
 	return m_top_level_acceleration_structures[0].result_buffer;
 }
 
 const BufferResource& dx12rayobjectmanager::GetTopLevelScratchAccelerationStructureBuffer()
 {
-	//return m_top_level_acceleration_structures[ray_object.object].scratch_buffer;
 	return m_top_level_acceleration_structures[0].scratch_buffer;
 }
 
 const BufferResource& dx12rayobjectmanager::GetTopLevelInstanceBuffer()
 {
-	//return m_top_level_acceleration_structures[ray_object.object].instance_buffer;
 	return m_top_level_acceleration_structures[0].instance_buffer;
 }
 
 const BufferResource& dx12rayobjectmanager::GetBottomLevelScratchAccelerationStructureBuffer(const RayTracingObject& ray_object)
 {
-	//UINT index = m_top_level_acceleration_structures[ray_object.object].bottom_level_indices[0];
 	return m_bottom_level_acceleration_structures[ray_object.bottom_level_index].result_buffer;
 }
 
@@ -132,11 +98,9 @@ const BufferResource& dx12rayobjectmanager::GetDataIndices() const
 	return m_data_indices;
 }
 
-UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects)//UINT bottom_level_index)
+UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<RayTracingObject>& objects)
 {
 	TopLevelAccelerationStructures top_level_acceleration_structure;
-
-	//top_level_acceleration_structure.bottom_level_indices = bottom_level_indices;
 
 	top_level_acceleration_structure.instance_buffer = dx12core::GetDx12Core().GetBufferManager()->CreateBuffer(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * objects.size(), D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_HEAP_TYPE_UPLOAD);
 
@@ -146,19 +110,18 @@ UINT dx12rayobjectmanager::BuildTopLevelAccelerationStructure(const std::vector<
 	{
 		BottomLevelAccelerationStructures* bottom_level_acceleration_structure = &m_bottom_level_acceleration_structures[objects[i].bottom_level_index];
 
-		D3D12_RAYTRACING_INSTANCE_DESC instancingDesc = {};
+		D3D12_RAYTRACING_INSTANCE_DESC instancing_desc = {};
 
-		instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
-			instancingDesc.Transform[2][2] = 1;
-		memcpy(instancingDesc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
-		//instancingDesc.Transform = bottom_level_acceleration_structure->transform;
-		instancingDesc.InstanceID = i;
-		instancingDesc.InstanceMask = 0xFF;
-		instancingDesc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
-		instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-		instancingDesc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
+		instancing_desc.Transform[0][0] = instancing_desc.Transform[1][1] =
+			instancing_desc.Transform[2][2] = 1;
+		memcpy(instancing_desc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
+		instancing_desc.InstanceID = i;
+		instancing_desc.InstanceMask = 0xFF;
+		instancing_desc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
+		instancing_desc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+		instancing_desc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
 
-		instancing_descs[i] = instancingDesc;
+		instancing_descs[i] = instancing_desc;
 	}
 
 	D3D12_RANGE nothing = { 0, 0 };
@@ -211,18 +174,16 @@ void dx12rayobjectmanager::UpdateTopLevelAccelerationStructure(const std::vector
 	{
 		BottomLevelAccelerationStructures* bottom_level_acceleration_structure = &m_bottom_level_acceleration_structures[objects[i].bottom_level_index];
 
-		D3D12_RAYTRACING_INSTANCE_DESC instancingDesc = {};
+		D3D12_RAYTRACING_INSTANCE_DESC instancing_desc = {};
 
-		//instancingDesc.Transform[0][0] = instancingDesc.Transform[1][1] =
-		//	instancingDesc.Transform[2][2] = 1;
-		memcpy(instancingDesc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
-		instancingDesc.InstanceID = i;
-		instancingDesc.InstanceMask = 0xFF;
-		instancingDesc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
-		instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-		instancingDesc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
+		memcpy(instancing_desc.Transform, objects[i].instance_transform.m, sizeof(objects[i].instance_transform.m));
+		instancing_desc.InstanceID = i;
+		instancing_desc.InstanceMask = 0xFF;
+		instancing_desc.InstanceContributionToHitGroupIndex = bottom_level_acceleration_structure->hit_shader_index;
+		instancing_desc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+		instancing_desc.AccelerationStructure = bottom_level_acceleration_structure->result_buffer.buffer->GetGPUVirtualAddress();
 
-		instancing_descs[i] = instancingDesc;
+		instancing_descs[i] = instancing_desc;
 	}
 
 	D3D12_RANGE nothing = { 0, 0 };
@@ -256,7 +217,7 @@ void dx12rayobjectmanager::UpdateTopLevelAccelerationStructure(const std::vector
 
 UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT3X4 instance_transform, UINT hit_shader_index)
 {
-	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_meshes.size()); //D3D12_RAYTRACING_GEOMETRY_DESC geometryDescriptions[1];
+	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_meshes.size());
 
 	for (int i = 0; i < m_meshes.size(); ++i)
 	{
@@ -264,11 +225,11 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT
 
 		geometry_descriptions[i].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 		geometry_descriptions[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-		geometry_descriptions[i].Triangles.Transform3x4 = m_meshes[i].transform.buffer.Get() == nullptr ? NULL : m_meshes[i].transform.buffer->GetGPUVirtualAddress();//NULL;
+		geometry_descriptions[i].Triangles.Transform3x4 = m_meshes[i].transform.buffer.Get() == nullptr ? NULL : m_meshes[i].transform.buffer->GetGPUVirtualAddress();
 		geometry_descriptions[i].Triangles.IndexFormat = DXGI_FORMAT_UNKNOWN;
 		geometry_descriptions[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 		geometry_descriptions[i].Triangles.IndexCount = 0;
-		geometry_descriptions[i].Triangles.VertexCount = m_meshes[i].mesh.nr_of_elements; //vertex_buffer->nr_of_elements;
+		geometry_descriptions[i].Triangles.VertexCount = m_meshes[i].mesh.nr_of_elements;
 		geometry_descriptions[i].Triangles.IndexBuffer = NULL;
 		geometry_descriptions[i].Triangles.VertexBuffer.StartAddress = m_meshes[i].mesh.buffer->GetGPUVirtualAddress();
 		geometry_descriptions[i].Triangles.VertexBuffer.StrideInBytes = m_meshes[i].mesh.element_size;
@@ -301,7 +262,6 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
 
 	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
-	//bottom_level_acceleration_structure.transform = instance_transform;
 
 	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
 
@@ -310,25 +270,15 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructure(DirectX::XMFLOAT
 
 UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructureAABB(DirectX::XMFLOAT3X4 instance_transform, UINT hit_shader_index)
 {
-	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_aabbs.size()); //D3D12_RAYTRACING_GEOMETRY_DESC geometryDescriptions[1];
+	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> geometry_descriptions(m_aabbs.size());
 
 	for (int i = 0; i < geometry_descriptions.size(); ++i)
 	{
-		//assert(m_meshes[i].mesh.buffer->GetGPUVirtualAddress() % 16 == 0);
-
 		geometry_descriptions[i].Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
 		geometry_descriptions[i].Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 		geometry_descriptions[i].AABBs.AABBCount = 1;
 		geometry_descriptions[i].AABBs.AABBs.StartAddress = m_aabbs[i].aabb.buffer->GetGPUVirtualAddress();
 		geometry_descriptions[i].AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
-		//geometry_descriptions[i].Triangles.Transform3x4 = m_meshes[i].transform.buffer.Get() == nullptr ? NULL : m_meshes[i].transform.buffer->GetGPUVirtualAddress();//NULL;
-		//geometry_descriptions[i].Triangles.IndexFormat = DXGI_FORMAT_UNKNOWN;
-		//geometry_descriptions[i].Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-		//geometry_descriptions[i].Triangles.IndexCount = 0;
-		//geometry_descriptions[i].Triangles.VertexCount = m_meshes[i].mesh.nr_of_elements; //vertex_buffer->nr_of_elements;
-		//geometry_descriptions[i].Triangles.IndexBuffer = NULL;
-		//geometry_descriptions[i].Triangles.VertexBuffer.StartAddress = m_meshes[i].mesh.buffer->GetGPUVirtualAddress();
-		//geometry_descriptions[i].Triangles.VertexBuffer.StrideInBytes = m_meshes[i].mesh.element_size;
 	}
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs;
@@ -358,7 +308,6 @@ UINT dx12rayobjectmanager::BuildBottomLevelAcceleratonStructureAABB(DirectX::XMF
 	dx12core::GetDx12Core().GetDirectCommand()->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, bottom_level_acceleration_structure.result_buffer.buffer.Get());
 
 	bottom_level_acceleration_structure.hit_shader_index = hit_shader_index;
-	//bottom_level_acceleration_structure.transform = instance_transform;
 
 	m_bottom_level_acceleration_structures.push_back(bottom_level_acceleration_structure);
 

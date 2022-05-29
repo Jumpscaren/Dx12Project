@@ -17,3 +17,14 @@ struct SphereAABB
 	float3 position;
 	float radius;
 };
+
+struct TriangleColour
+{
+	float3 colour;
+};
+
+struct SphereNormal
+{
+	float3 sphere_hit_point;
+	float3 sphere_normal;
+};

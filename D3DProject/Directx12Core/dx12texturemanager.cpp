@@ -404,7 +404,7 @@ dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource,
 	}
 	else if (texture_type & TextureType::TEXTURE_UAV)
 	{
-		//Create unorded access view
+		//Create shader resource view
 		D3D12_CPU_DESCRIPTOR_HANDLE heap_handle = m_dh_shader_bindable->GetCPUDescriptorHandleForHeapStart();
 		heap_handle.ptr += descriptor_size_shader_bindable * (m_max_dh_shader_bindable_offset - 1);
 		heap_handle.ptr -= descriptor_size_shader_bindable * m_acceleration_counter;
@@ -414,23 +414,7 @@ dx12texture dx12texturemanager::CreateStructuredBuffer(ID3D12Resource* resource,
 		shader_resource_view_desc.RaytracingAccelerationStructure.Location = resource->GetGPUVirtualAddress();
 		shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-		//shader_resource_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-		//shader_resource_view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		//shader_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		//shader_resource_view_desc.Buffer.NumElements = nr_of_elements;
-		//shader_resource_view_desc.Buffer.FirstElement = 0;
-		//shader_resource_view_desc.Buffer.StructureByteStride = element_size;
-		//shader_resource_view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 		dx12core::GetDx12Core().GetDevice()->CreateShaderResourceView(nullptr, &shader_resource_view_desc, heap_handle);
-
-		//D3D12_UNORDERED_ACCESS_VIEW_DESC unorded_access_view_desc = {};
-		//unorded_access_view_desc.Format = DXGI_FORMAT_UNKNOWN;
-		//unorded_access_view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER; 
-		//unorded_access_view_desc.Buffer.NumElements = nr_of_elements;
-		//unorded_access_view_desc.Buffer.FirstElement = 0;
-		//unorded_access_view_desc.Buffer.StructureByteStride = element_size;
-		//unorded_access_view_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		//dx12core::GetDx12Core().GetDevice()->CreateUnorderedAccessView(resource, nullptr, &unorded_access_view_desc, heap_handle);
 
 		structured_buffer.descriptor_heap_offset = m_max_dh_shader_bindable_offset - m_acceleration_counter - 1;
 		structured_buffer.resource_index = -1;
@@ -461,11 +445,6 @@ ID3D12DescriptorHeap* dx12texturemanager::GetDepthStencilViewDescriptorHeap()
 {
 	return m_dh_DSV.Get();
 }
-
-//Imorgon
-//Add upload buffer for data and make it so we do not use 1.4 gb just for some textures
-//Root parameters
-//Draw a triangle 
 
 TextureType operator|(TextureType lhs, TextureType rhs)
 {

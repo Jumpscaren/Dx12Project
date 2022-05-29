@@ -164,17 +164,6 @@ void dx12core::CreateCommandQueue(ID3D12CommandQueue** command_queue, const D3D1
 	assert(SUCCEEDED(hr));
 }
 
-void dx12core::CreateQuery()
-{
-	//D3D12_QUERY_HEAP_DESC heap_desc;
-	//heap_desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-	//heap_desc.Count = queries;
-	//heap_desc.NodeMask = 0;
-	//m_device->CreateQueryHeap(&heap_desc, IID_PPV_ARGS(m_query_timestamp.GetAddressOf()));
-
-	//m_buffer_query_data = m_buffer_manager->CreateBuffer(sizeof(UINT64) * queries, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_HEAP_TYPE_READBACK);
-}
-
 dx12core::dx12core()
 {
 
@@ -187,14 +176,11 @@ void dx12core::PreDraw()
 	UINT current_backbuffer_index = m_swapchain->GetCurrentBackBufferIndex();
 	current_backbuffer_index = m_output_uav.render_target_view.descriptor_heap_offset;
 
-	// Set descriptor heaps before setting root signature if direct heap access is needed
 	m_direct_command->SetDescriptorHeap(m_texture_manager->GetShaderBindableDescriptorHeap());
 	m_direct_command->SetRootSignature(m_render_pipeline->GetRootSignature());
 	m_direct_command->SetPipelineState(m_render_pipeline->GetPipelineState());
 
 	ID3D12Resource* back_buffer = m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
-	//ID3D12Resource* back_buffer = m_texture_manager->GetTextureResource(m_backbuffers[current_backbuffer_index].render_target_view.resource_index);
-	//m_direct_command->TransistionBuffer(back_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	m_direct_command->ClearRenderTargetView(m_texture_manager->GetRenderTargetViewDescriptorHeap(), current_backbuffer_index);
 	m_direct_command->ClearDepthStencilView(m_texture_manager->GetDepthStencilViewDescriptorHeap(), 0);
@@ -235,11 +221,6 @@ void dx12core::Draw()
 
 		m_direct_command->Draw(object->mesh_nr_of_elements, 1, 0, 0);
 	}
-	//m_direct_command->SetDescriptorTable(m_render_pipeline->GetObjectRootBinds()[0], m_texture_manager->GetShaderBindableDescriptorHeap(), vertex.structured_buffer);
-	//m_direct_command->SetDescriptorTable(m_render_pipeline->GetObjectRootBinds()[1], m_texture_manager->GetShaderBindableDescriptorHeap(), texture.shader_resource_view);
-	//commandList->SetGraphicsRootShaderResourceView(0, vertexBuffer->GetGPUVirtualAddress());
-	//commandList->SetGraphicsRootDescriptorTable(1, shaderBindableHeap->GetGPUDescriptorHandleForHeapStart());
-	//commandList->DrawInstanced(3, 1, 0, 0);
 }
 
 void dx12core::FinishDraw()
@@ -264,19 +245,8 @@ void dx12core::FinishDraw()
 	m_direct_command->SignalAndWait();
 }
 
-void dx12core::CreateRaytracingStructure(BufferResource* vertex_buffer)
+void dx12core::CreateOutputTexture()
 {
-	//DXGI_ADAPTER_DESC1 adapter_desc;
-	//assert(m_adapter.Get());
-	//m_adapter->GetDesc1(&adapter_desc);
-	//std::wstring wstring(adapter_desc.Description);
-	//std::string string(wstring.begin(), wstring.end());
-	//std::cout << string.c_str() << "\n";
-	//assert(CheckDXRSupport(m_device.Get()));
-
-	//BuildBottomLevelAccelerationStructure(vertex_buffer);
-	//BuildTopLevelAccelerationStructure();
-
 	D3D12_CLEAR_VALUE writableClearValue;
 	writableClearValue.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	writableClearValue.Color[0] = writableClearValue.Color[1] =
@@ -290,12 +260,11 @@ void dx12core::CreateRaytracingStructure(BufferResource* vertex_buffer)
 
 TextureResource dx12core::GetOutputUAV()
 {
-	return m_output_uav;//m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
+	return m_output_uav;
 }
 
 void dx12core::PreDispatchRays()
 {
-	//m_render_pipeline->CheckIfRaytracingRenderPipeline();
 	assert(m_ray_tracing_render_pipeline != nullptr);
 
 	ID3D12Resource* writable_resource = m_texture_manager->GetTextureResource(m_output_uav.render_target_view.resource_index);
@@ -305,8 +274,8 @@ void dx12core::PreDispatchRays()
 void dx12core::DispatchRays()
 {
 	D3D12_DISPATCH_RAYS_DESC desc;
-	desc.RayGenerationShaderRecord = m_ray_tracing_render_pipeline->RayGenerationShaderRecord()->GetGpuAdressRange();//rayGenRecord.GetGpuAdressRange();
-	desc.MissShaderTable = m_ray_tracing_render_pipeline->GetMissShaderRecord()->GetGpuAdressRangeAndStride();//missTable.GetGpuAdressRangeAndStride();
+	desc.RayGenerationShaderRecord = m_ray_tracing_render_pipeline->RayGenerationShaderRecord()->GetGpuAdressRange();
+	desc.MissShaderTable = m_ray_tracing_render_pipeline->GetMissShaderRecord()->GetGpuAdressRangeAndStride();
 	desc.HitGroupTable = m_ray_tracing_render_pipeline->GetHitShaderRecord()->GetGpuAdressRangeAndStride();
 	desc.CallableShaderTable.StartAddress = 0;
 	desc.CallableShaderTable.SizeInBytes = 0;
@@ -317,32 +286,7 @@ void dx12core::DispatchRays()
 
 	m_direct_command->SetDescriptorHeap(m_texture_manager->GetShaderBindableDescriptorHeap());
 
-	m_direct_command->SetComputeRootSignature(m_ray_tracing_render_pipeline->GetRaytracingGlobalRootSignature());
-	//m_direct_command->SetRootSignature(m_ray_tracing_render_pipeline->GetRaytracingLocalRootSignature());
-
 	m_direct_command->SetStateObject(m_ray_tracing_render_pipeline->GetRaytracingStateObject());
-
-	RootRenderBinding temp; 
-	temp.binding_slot = 0;
-	temp.binding_type = BindingType::SHADER_RESOURCE;
-	temp.register_space = 0;
-	temp.shader_type = D3D12_SHADER_VISIBILITY_ALL;
-	temp.root_parameter_index = 0;
-
-	dx12texture temp_texture = m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().structured_buffer;
-
-	//m_direct_command->SetComputeDescriptorTable(&temp, m_texture_manager->GetShaderBindableDescriptorHeap(), temp_texture);
-
-	RootRenderBinding temp_output;
-	temp.binding_slot = 0;
-	temp.binding_type = BindingType::UNORDERED_ACCESS;
-	temp.register_space = 0;
-	temp.shader_type = D3D12_SHADER_VISIBILITY_ALL;
-	temp.root_parameter_index = 1;
-
-	//m_direct_command->SetComputeDescriptorTable(&temp, m_texture_manager->GetShaderBindableDescriptorHeap(), m_output_uav.unordered_access_view);
-
-	//m_direct_command->ResourceBarrier();
 
 	m_direct_command->DispatchRays(&desc);
 }
@@ -354,66 +298,8 @@ void dx12core::AfterDispatchRays()
 	m_direct_command->TransistionBuffer(writable_resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
-void dx12core::SetTopLevelTransform(float rotation, const RayTracingObject& acceleration_structure_object)
-{
-	DirectX::XMFLOAT3X4 toStore;
-	DirectX::XMStoreFloat3x4(&toStore, DirectX::XMMatrixRotationY(rotation));
-
-	D3D12_RAYTRACING_INSTANCE_DESC instancingDesc;
-	memcpy(instancingDesc.Transform, &toStore, sizeof(instancingDesc.Transform));
-	instancingDesc.InstanceID = 0;
-	instancingDesc.InstanceMask = 0xFF;
-	instancingDesc.InstanceContributionToHitGroupIndex = 0;
-	instancingDesc.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
-	instancingDesc.AccelerationStructure = m_ray_object_manager->GetBottomLevelScratchAccelerationStructureBuffer(acceleration_structure_object).buffer->GetGPUVirtualAddress();
-		//m_ray_object_manager->GetBottomLevelScratchAccelerationStructureBuffer()->GetGPUVirtualAddress();//m_bottom_level_result_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();//bottomLevelResultAccelerationStructureBuffer->GetGPUVirtualAddress();
-
-	D3D12_RANGE nothing = { 0, 0 };
-	unsigned char* mappedPtr = nullptr;
-	HRESULT hr = m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));
-		//m_ray_object_manager->GetTopLevelInstanceBuffer()->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));//topLevelInstanceBuffer->Map(0, &nothing, reinterpret_cast<void**>(&mappedPtr));
-
-	assert(SUCCEEDED(hr));
-
-	memcpy(mappedPtr, &instancingDesc, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
-	m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->Unmap(0, nullptr);
-	//m_ray_object_manager->GetTopLevelInstanceBuffer()->Unmap(0, nullptr);
-	//topLevelInstanceBuffer->Unmap(0, nullptr);
-
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs;
-	topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-	topLevelInputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-	topLevelInputs.NumDescs = 1;
-	topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-	topLevelInputs.InstanceDescs = m_ray_object_manager->GetTopLevelInstanceBuffer().buffer->GetGPUVirtualAddress();
-		//m_ray_object_manager->GetTopLevelInstanceBuffer()->GetGPUVirtualAddress();//topLevelInstanceBuffer->GetGPUVirtualAddress();
-
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accelerationStructureDesc;
-	accelerationStructureDesc.DestAccelerationStructureData = m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().buffer->GetGPUVirtualAddress();
-		//m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer()->GetGPUVirtualAddress();
-		//topLevelResultAccelerationStructureBuffer->GetGPUVirtualAddress();
-	accelerationStructureDesc.Inputs = topLevelInputs;
-	accelerationStructureDesc.SourceAccelerationStructureData = NULL;
-	accelerationStructureDesc.ScratchAccelerationStructureData = m_ray_object_manager->GetTopLevelScratchAccelerationStructureBuffer().buffer->GetGPUVirtualAddress();
-		//m_ray_object_manager->GetTopLevelScratchAccelerationStructureBuffer()->GetGPUVirtualAddress();//m_top_level_scratch_acceleration_structure_buffer.buffer->GetGPUVirtualAddress();
-		//topLevelScratchAccelerationStructureBuffer->GetGPUVirtualAddress();
-
-	m_direct_command->BuildRaytracingAccelerationStructure(&accelerationStructureDesc);//&accelerationStructureDesc, 0, nullptr);
-
-	m_direct_command->ResourceBarrier(D3D12_RESOURCE_BARRIER_TYPE_UAV, m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer().buffer.Get());
-		//m_ray_object_manager->GetTopLevelResultAccelerationStructureBuffer());
-	//D3D12_RESOURCE_BARRIER uavBarrier = {};
-	//uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	//uavBarrier.UAV.pResource = m_top_level_result_acceleration_structure_buffer.buffer.Get();
-	//list->ResourceBarrier(1, &uavBarrier);
-}
-
 dx12core::~dx12core()
 {
-	//m_adapter->Release();
-	//m_device->Release();
-	//m_factory->Release();
-
 	delete m_direct_command;
 	delete m_texture_manager;
 	delete m_buffer_manager;
@@ -438,7 +324,6 @@ void dx12core::Init(HWND hwnd, UINT backbuffer_count)
 	CreateDevice();
 	CreateCommandQueue(m_direct_command_queue.GetAddressOf(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 	CreateSwapchain(hwnd);
-	CreateQuery();
 
 	m_direct_command = new dx12command(D3D12_COMMAND_LIST_TYPE_DIRECT);
 	m_texture_manager = new dx12texturemanager(3, 1, 50);
@@ -448,8 +333,6 @@ void dx12core::Init(HWND hwnd, UINT backbuffer_count)
 		m_backbuffers.push_back(m_texture_manager->CreateRenderTargetView(i));
 
 	m_depth_stencil = m_texture_manager->CreateDepthStencilView(m_backbuffer_width, m_backbuffer_height, D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE);
-
-	//m_texture_manager->CreateTexture2D("Textures/image.png", TextureType::TEXTURE_SRV);
 
 	m_ray_object_manager = new dx12rayobjectmanager();
 }
@@ -501,7 +384,5 @@ void dx12core::SetRayTracingRenderPipeline(dx12raytracingrenderpipeline* render_
 
 void dx12core::Show()
 {
-	//PreDraw();
-	//Draw();
-	//FinishDraw();
+
 }
