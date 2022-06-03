@@ -34,7 +34,7 @@ bool dx12core::CheckDXRSupport(ID3D12Device* device)
 	if (FAILED(hr))
 		return false;
 
-	return featureData.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
+	return featureData.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;
 }
 
 void dx12core::CreateDevice()
